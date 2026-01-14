@@ -246,7 +246,7 @@ Need more features? **DemoScript Studio** offers:
 - **Deployment** - One-command deploy to Netlify
 - **Public tunnels** - Share demos via ngrok or Cloudflare
 
-Visit [demoscript.io](https://demoscript.io) for more information.
+Visit [demoscript.app](https://demoscript.app) for more information.
 
 ## Development
 
