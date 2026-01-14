@@ -5,6 +5,8 @@
 
 A framework for creating scripted product demonstrations. Write YAML files to define demo steps, and DemoScript provides a polished web UI for presenting them.
 
+![DemoScript Demo](assets/demo.gif)
+
 ## Features
 
 - **YAML-based demos** - Define demos with a simple, readable schema
