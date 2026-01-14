@@ -44,6 +44,10 @@ function getValidator(): ValidateFunction {
     allowUnionTypes: true,
   });
 
+  // Register uri format to suppress "unknown format" warnings
+  // Using a permissive validator since we just want structural validation
+  ajv.addFormat('uri', true);
+
   validate = ajv.compile(schema);
   return validate;
 }
