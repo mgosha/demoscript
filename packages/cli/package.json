@@ -1,5 +1,5 @@
 {
-  "name": "demoscript",
+  "name": "@demoscript/cli",
   "version": "1.0.0",
   "description": "CLI tool for DemoScript - create and present scripted product demonstrations",
   "type": "module",

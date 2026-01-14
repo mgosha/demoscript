@@ -26,7 +26,7 @@ A framework for creating scripted product demonstrations. Write YAML files to de
 ## Installation
 
 ```bash
-npm install -g demoscript
+npm install -g @demoscript/cli
 ```
 
 Then run with:
@@ -38,7 +38,7 @@ demoscript serve ./my-demo
 Or run directly with npx (no install required):
 
 ```bash
-npx demoscript serve ./my-demo
+npx @demoscript/cli serve ./my-demo
 ```
 
 **Requires:** Node.js >= 18
