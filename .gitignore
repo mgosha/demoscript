@@ -6,6 +6,9 @@ dist/
 dist-node/
 *.tsbuildinfo
 
+# Generated demo assets
+examples/*/assets/
+
 # IDE
 .vscode/
 .idea/
