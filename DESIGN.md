@@ -1,5 +1,7 @@
 # DemoScript Design Document
 
+> **Note:** This document describes the full DemoScript architecture. The open source version includes the `serve` command for live presentations. Additional features like `record`, `build`, `deploy`, and video export are available in [DemoScript Studio](https://demoscript.app).
+
 ## Overview
 
 DemoScript is a framework for creating scripted, shareable product demonstrations. Users write simple YAML files describing demo steps, and the framework provides:
