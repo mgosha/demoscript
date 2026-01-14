@@ -1,0 +1,306 @@
+import { createContext, useContext, useReducer, ReactNode, useState, useCallback, useMemo } from 'react';
+import type { DemoConfig, DemoRecordings, StepOrGroup, Step, Recording, StepGroup } from '../types/schema';
+import { isStepGroup, flattenSteps } from '../types/schema';
+
+export type ExecutionMode = 'live' | 'recorded';
+export type StepStatus = 'pending' | 'executing' | 'complete' | 'error';
+
+interface DemoState {
+  config: DemoConfig | null;
+  recordings: DemoRecordings | null;
+  currentStep: number;  // Index into flatSteps
+  stepStatuses: Record<number, StepStatus>;
+  stepErrors: Record<number, string>;
+  stepResponses: Record<number, unknown>;
+  variables: Record<string, unknown>;
+  mode: ExecutionMode;
+  isLiveAvailable: boolean;
+  stepIdMap: Map<string, number>;  // Maps step IDs to flat indices
+  flatSteps: Step[];  // Flattened array of all steps
+  sidebarCollapsed: boolean;  // Sidebar navigation state
+}
+
+type DemoAction =
+  | { type: 'SET_CONFIG'; payload: DemoConfig }
+  | { type: 'SET_RECORDINGS'; payload: DemoRecordings }
+  | { type: 'SET_STEP'; payload: number }
+  | { type: 'NEXT_STEP' }
+  | { type: 'PREV_STEP' }
+  | { type: 'GOTO_STEP_BY_ID'; payload: string }
+  | { type: 'SET_STEP_STATUS'; payload: { step: number; status: StepStatus } }
+  | { type: 'SET_STEP_ERROR'; payload: { step: number; error: string } }
+  | { type: 'SET_STEP_RESPONSE'; payload: { step: number; response: unknown } }
+  | { type: 'SET_VARIABLE'; payload: { name: string; value: unknown } }
+  | { type: 'SET_VARIABLES'; payload: Record<string, unknown> }
+  | { type: 'SET_MODE'; payload: ExecutionMode }
+  | { type: 'SET_LIVE_AVAILABLE'; payload: boolean }
+  | { type: 'TOGGLE_SIDEBAR' }
+  | { type: 'RESET' };
+
+const initialState: DemoState = {
+  config: null,
+  recordings: null,
+  currentStep: 0,
+  stepStatuses: {},
+  stepErrors: {},
+  stepResponses: {},
+  variables: {},
+  mode: 'recorded',
+  isLiveAvailable: false,
+  stepIdMap: new Map(),
+  flatSteps: [],
+  sidebarCollapsed: false,
+};
+
+// Helper to build step ID map from flattened steps
+function buildStepIdMap(flatSteps: Step[]): Map<string, number> {
+  const map = new Map<string, number>();
+  flatSteps.forEach((step, index) => {
+    if ('id' in step && step.id) {
+      map.set(step.id, index);
+    }
+  });
+  return map;
+}
+
+function demoReducer(state: DemoState, action: DemoAction): DemoState {
+  switch (action.type) {
+    case 'SET_CONFIG': {
+      const flatSteps = flattenSteps(action.payload.steps);
+      // Initialize sidebar collapsed state from config
+      const sidebarCollapsed = action.payload.settings?.sidebar?.collapsed ?? false;
+      return {
+        ...state,
+        config: action.payload,
+        flatSteps,
+        stepIdMap: buildStepIdMap(flatSteps),
+        sidebarCollapsed,
+      };
+    }
+
+    case 'SET_RECORDINGS':
+      return { ...state, recordings: action.payload };
+
+    case 'SET_STEP':
+      return { ...state, currentStep: action.payload };
+
+    case 'NEXT_STEP':
+      return {
+        ...state,
+        currentStep: Math.min(state.currentStep + 1, state.flatSteps.length - 1),
+      };
+
+    case 'PREV_STEP':
+      return {
+        ...state,
+        currentStep: Math.max(state.currentStep - 1, 0),
+      };
+
+    case 'GOTO_STEP_BY_ID': {
+      const targetIndex = state.stepIdMap.get(action.payload);
+      if (targetIndex !== undefined) {
+        return { ...state, currentStep: targetIndex };
+      }
+      console.warn(`Step ID "${action.payload}" not found, staying on current step`);
+      return state;
+    }
+
+    case 'SET_STEP_STATUS':
+      return {
+        ...state,
+        stepStatuses: { ...state.stepStatuses, [action.payload.step]: action.payload.status },
+      };
+
+    case 'SET_STEP_ERROR':
+      return {
+        ...state,
+        stepErrors: { ...state.stepErrors, [action.payload.step]: action.payload.error },
+      };
+
+    case 'SET_STEP_RESPONSE':
+      return {
+        ...state,
+        stepResponses: { ...state.stepResponses, [action.payload.step]: action.payload.response },
+      };
+
+    case 'SET_VARIABLE':
+      return {
+        ...state,
+        variables: { ...state.variables, [action.payload.name]: action.payload.value },
+      };
+
+    case 'SET_VARIABLES':
+      return {
+        ...state,
+        variables: { ...state.variables, ...action.payload },
+      };
+
+    case 'SET_MODE':
+      return { ...state, mode: action.payload };
+
+    case 'SET_LIVE_AVAILABLE':
+      return { ...state, isLiveAvailable: action.payload };
+
+    case 'TOGGLE_SIDEBAR':
+      return { ...state, sidebarCollapsed: !state.sidebarCollapsed };
+
+    case 'RESET':
+      return {
+        ...initialState,
+        config: state.config,
+        recordings: state.recordings,
+        mode: state.mode,
+        isLiveAvailable: state.isLiveAvailable,
+        stepIdMap: state.stepIdMap,
+        flatSteps: state.flatSteps,
+        sidebarCollapsed: state.sidebarCollapsed,
+      };
+
+    default:
+      return state;
+  }
+}
+
+// Structure info for rendering stepper with groups
+export interface StepperItem {
+  type: 'step' | 'group';
+  flatIndex?: number;  // For steps, the index in flatSteps
+  step?: Step;
+  group?: StepGroup;
+  groupIndex?: number;  // For groups, the index in config.steps
+  stepsInGroup?: { step: Step; flatIndex: number }[];  // For groups, the nested steps
+}
+
+// Build stepper structure that maps to flat indices
+function buildStepperStructure(steps: StepOrGroup[]): StepperItem[] {
+  const items: StepperItem[] = [];
+  let flatIndex = 0;
+
+  for (let i = 0; i < steps.length; i++) {
+    const item = steps[i];
+    if (isStepGroup(item)) {
+      const stepsInGroup = item.steps.map((step) => ({
+        step,
+        flatIndex: flatIndex++,
+      }));
+      items.push({
+        type: 'group',
+        group: item,
+        groupIndex: i,
+        stepsInGroup,
+      });
+    } else {
+      items.push({
+        type: 'step',
+        step: item,
+        flatIndex: flatIndex++,
+      });
+    }
+  }
+
+  return items;
+}
+
+interface DemoContextValue {
+  state: DemoState;
+  dispatch: React.Dispatch<DemoAction>;
+  currentStepConfig: Step | null;
+  currentRecording: Recording | null;
+  totalSteps: number;
+  isFirstStep: boolean;
+  isLastStep: boolean;
+  getStepStatus: (step: number) => StepStatus;
+  gotoStepById: (id: string) => void;
+  hasStepId: (id: string) => boolean;
+  // Group expansion
+  expandedGroups: Record<number, boolean>;
+  toggleGroup: (groupIndex: number) => void;
+  stepperStructure: StepperItem[];
+}
+
+const DemoContext = createContext<DemoContextValue | null>(null);
+
+export function DemoProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(demoReducer, initialState);
+  const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
+
+  // Initialize expanded state when config changes
+  useMemo(() => {
+    if (state.config) {
+      const initial: Record<number, boolean> = {};
+      state.config.steps.forEach((item, index) => {
+        if (isStepGroup(item)) {
+          // Expanded by default unless collapsed: true
+          initial[index] = !item.collapsed;
+        }
+      });
+      setExpandedGroups(initial);
+    }
+  }, [state.config]);
+
+  const toggleGroup = useCallback((groupIndex: number) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupIndex]: !prev[groupIndex],
+    }));
+  }, []);
+
+  // Current step from flat array
+  const currentStepConfig = state.flatSteps[state.currentStep] ?? null;
+
+  const currentRecording = state.recordings?.recordings.find(
+    (r) => r.stepId === `step-${state.currentStep}`
+  ) ?? null;
+
+  const totalSteps = state.flatSteps.length;
+  const isFirstStep = state.currentStep === 0;
+  const isLastStep = state.currentStep === totalSteps - 1;
+
+  const getStepStatus = (step: number): StepStatus => {
+    return state.stepStatuses[step] ?? 'pending';
+  };
+
+  const gotoStepById = (id: string) => {
+    dispatch({ type: 'GOTO_STEP_BY_ID', payload: id });
+  };
+
+  const hasStepId = (id: string): boolean => {
+    return state.stepIdMap.has(id);
+  };
+
+  // Build stepper structure for rendering
+  const stepperStructure = useMemo(() => {
+    if (!state.config) return [];
+    return buildStepperStructure(state.config.steps);
+  }, [state.config]);
+
+  return (
+    <DemoContext.Provider
+      value={{
+        state,
+        dispatch,
+        currentStepConfig,
+        currentRecording,
+        totalSteps,
+        isFirstStep,
+        isLastStep,
+        getStepStatus,
+        gotoStepById,
+        hasStepId,
+        expandedGroups,
+        toggleGroup,
+        stepperStructure,
+      }}
+    >
+      {children}
+    </DemoContext.Provider>
+  );
+}
+
+export function useDemo() {
+  const context = useContext(DemoContext);
+  if (!context) {
+    throw new Error('useDemo must be used within a DemoProvider');
+  }
+  return context;
+}

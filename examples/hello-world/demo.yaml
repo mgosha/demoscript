@@ -1,0 +1,89 @@
+# Minimal Hello World Demo
+# Your first DemoScript demo - simple and easy to understand
+
+title: "Hello World"
+description: "Your first DemoScript demo"
+version: "1.0"
+author: "DemoScript"
+tags:
+  - beginner
+  - tutorial
+
+metadata:
+  duration: "2 minutes"
+  difficulty: beginner
+  category: "Getting Started"
+
+settings:
+  base_url: "https://jsonplaceholder.typicode.com"
+  effects:
+    confetti: true
+    sounds: true
+  dashboard:
+    enabled: true
+    show_stats: true
+    data_cards:
+      - label: "API Status"
+        value: "Online"
+        type: text
+      - label: "Total Users"
+        url: "${base_url}/users"
+        value: length
+        type: number
+      - label: "Total Posts"
+        url: "${base_url}/posts"
+        value: length
+        type: number
+    data_lists:
+      - label: "Recent Posts"
+        url: "${base_url}/posts"
+        items: ""
+        layout: cards
+        limit: 3
+        empty_message: "No posts found"
+        card:
+          title:
+            key: title
+            type: text
+          fields:
+            - key: id
+              label: "Post ID"
+              type: mono
+            - key: userId
+              label: "Author ID"
+              type: mono
+
+steps:
+  - slide: |
+      # Welcome to DemoScript
+
+      This is a simple demo showing how DemoScript works.
+
+      Press **->** or **Space** to continue.
+
+  - rest: GET /users/1
+    title: "Fetch a User"
+    description: "Call a REST API and display the result"
+    save:
+      userName: name
+      userEmail: email
+    results:
+      - key: name
+        label: "Name"
+      - key: email
+        label: "Email"
+      - key: phone
+        label: "Phone"
+
+  - slide: |
+      # Success!
+
+      We fetched user **$userName** with email $userEmail.
+
+      That's the basics of DemoScript!
+
+      ---
+
+      **Next steps:**
+      - Try the **Feature Showcase** demo for all step types
+      - Check out the docs at [github.com/your-org/demoscript](https://github.com)

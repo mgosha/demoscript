@@ -1,0 +1,84 @@
+{
+  "demoVersion": "2.0",
+  "recordedAt": "2026-01-12T04:54:46.401Z",
+  "recordings": [
+    {
+      "stepId": "step-2",
+      "timestamp": "2026-01-12T04:54:46.246Z",
+      "output": "Hello from DemoScript!",
+      "stdout": "Hello from DemoScript!",
+      "stderr": "",
+      "status": 0
+    },
+    {
+      "stepId": "step-3",
+      "timestamp": "2026-01-12T04:54:46.248Z",
+      "output": "2026-01-11 22:54:46",
+      "stdout": "2026-01-11 22:54:46",
+      "stderr": "",
+      "status": 0
+    },
+    {
+      "stepId": "step-4",
+      "timestamp": "2026-01-12T04:54:46.351Z",
+      "request": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users/1",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": 1,
+          "name": "Leanne Graham",
+          "username": "Bret",
+          "email": "Sincere@april.biz",
+          "address": {
+            "street": "Kulas Light",
+            "suite": "Apt. 556",
+            "city": "Gwenborough",
+            "zipcode": "92998-3874",
+            "geo": {
+              "lat": "-37.3159",
+              "lng": "81.1496"
+            }
+          },
+          "phone": "1-770-736-8031 x56442",
+          "website": "hildegard.org",
+          "company": {
+            "name": "Romaguera-Crona",
+            "catchPhrase": "Multi-layered client-server neural-net",
+            "bs": "harness real-time e-markets"
+          }
+        }
+      }
+    },
+    {
+      "stepId": "step-9",
+      "timestamp": "2026-01-12T04:54:46.401Z",
+      "request": {
+        "method": "POST",
+        "url": "https://jsonplaceholder.typicode.com/posts",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "My First Post",
+          "body": "This is the body of my post created with DemoScript",
+          "userId": "1"
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "title": "My First Post",
+          "body": "This is the body of my post created with DemoScript",
+          "userId": "1",
+          "id": 101
+        }
+      }
+    }
+  ]
+}

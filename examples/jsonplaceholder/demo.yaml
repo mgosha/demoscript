@@ -1,0 +1,127 @@
+# JSONPlaceholder API Demo
+# A simple starter demo using a free public REST API
+
+title: "Getting Started with DemoScript"
+description: "Learn DemoScript basics with a simple REST API example"
+version: "1.0"
+author: "DemoScript"
+tags: ["tutorial", "beginner", "api"]
+
+metadata:
+  duration: "3 minutes"
+  difficulty: beginner
+  category: "Tutorial"
+
+settings:
+  base_url: "https://jsonplaceholder.typicode.com"
+
+  effects:
+    confetti: true
+    sounds: true
+    transitions: true
+
+steps:
+  - slide: |
+      # Getting Started with DemoScript
+
+      Welcome! This tutorial demonstrates the basics:
+
+      - **REST steps** - Make API calls
+      - **Variable saving** - Capture response data
+      - **Variable substitution** - Use saved values in later steps
+      - **Results display** - Format API responses
+
+      We'll use [JSONPlaceholder](https://jsonplaceholder.typicode.com),
+      a free fake REST API for testing.
+
+    title: "Welcome"
+
+  - rest: GET /users/1
+    title: "Fetch a User"
+    description: "Make a GET request to fetch user data"
+    save:
+      userId: id
+      userName: name
+      userEmail: email
+    results:
+      - key: ""
+        label: "Full Response"
+        type: json
+        expandedDepth: 2
+
+  - slide: |
+      # Saving Variables
+
+      In the previous step, we saved values from the response:
+
+      ```yaml
+      save:
+        userId: id          # response.id → $userId
+        userName: name      # response.name → $userName
+        userEmail: email    # response.email → $userEmail
+      ```
+
+      Now we can use `$userId`, `$userName`, and `$userEmail`
+      in any subsequent step!
+
+    title: "Variables"
+
+  - rest: GET /posts?userId=$userId
+    title: "Fetch User's Posts"
+    description: "Use $userId from the previous step"
+    results:
+      - key: ""
+        label: "Posts by $userName"
+        type: table
+        columns:
+          - key: id
+            label: "ID"
+          - key: title
+            label: "Title"
+
+  - rest: POST /posts
+    title: "Create a Post"
+    description: "Submit form data to create a new post"
+    form:
+      - name: title
+        label: "Title"
+        type: text
+        default: "My First Post"
+        required: true
+      - name: body
+        label: "Content"
+        type: textarea
+        default: "This is the post body content."
+      - name: userId
+        label: "Author ID"
+        type: number
+        default: "$userId"
+        readonly: true
+    save:
+      newPostId: id
+    results:
+      - key: id
+        label: "Created Post ID"
+      - key: title
+        label: "Title"
+
+  - slide: |
+      # Demo Complete!
+
+      You've learned the DemoScript basics:
+
+      | Concept | Example |
+      |---------|---------|
+      | REST calls | `rest: GET /users/1` |
+      | Save values | `save: { userId: id }` |
+      | Use variables | `GET /posts?userId=$userId` |
+      | Form inputs | `form: [{ name: title, type: text }]` |
+      | Display results | `results: [{ key: id, type: text }]` |
+
+      ### What's Next?
+
+      - Check out `examples/feature-showcase` for advanced features
+      - See `examples/github-api` for custom link handlers
+      - Read the [full documentation](https://github.com/mgosha/demoscript)
+
+    title: "Complete!"

@@ -1,0 +1,150 @@
+# GitHub API Demo
+# Demonstrates custom link handlers for external services
+
+title: "GitHub API Demo"
+description: "Explore GitHub repositories and issues with custom link handlers"
+version: "1.0"
+author: "DemoScript"
+tags: ["api", "github", "demo"]
+
+metadata:
+  duration: "5 minutes"
+  difficulty: beginner
+  category: "API Integration"
+
+settings:
+  base_url: "https://api.github.com"
+
+  # Custom link handlers for GitHub URLs
+  links:
+    github:
+      user: "https://github.com/{value}"
+      repo: "https://github.com/{value}"
+      issue: "https://github.com/facebook/react/issues/{value}"
+
+  effects:
+    confetti: true
+    sounds: true
+    transitions: true
+
+steps:
+  - slide: |
+      # GitHub API Demo
+
+      This demo shows how to use **custom link handlers** to create
+      clickable links to external services.
+
+      We'll explore:
+      1. **Fetch User** - Get a GitHub user profile
+      2. **List Repos** - Browse public repositories
+      3. **View Issues** - See open issues with clickable links
+
+      All links will open the corresponding GitHub pages.
+
+    title: "Introduction"
+
+  - rest: GET /users/octocat
+    title: "Fetch User Profile"
+    description: "Get the GitHub profile for octocat"
+    save:
+      userName: login
+      userAvatar: avatar_url
+      userBio: bio
+      userRepos: public_repos
+    results:
+      - key: ""
+        label: "Response"
+        type: json
+        expandedDepth: 1
+      - key: login
+        label: "Username"
+        type: address
+        link: github
+      - key: name
+        label: "Name"
+      - key: public_repos
+        label: "Public Repos"
+      - key: followers
+        label: "Followers"
+
+  - rest: GET /users/octocat/repos?per_page=5&sort=updated
+    title: "List Repositories"
+    description: "Get the 5 most recently updated repositories"
+    save:
+      firstRepoName: "[0].name"
+      firstRepoFullName: "[0].full_name"
+    results:
+      - key: ""
+        label: "Repositories"
+        type: table
+        columns:
+          - key: name
+            label: "Name"
+          - key: description
+            label: "Description"
+          - key: stargazers_count
+            label: "Stars"
+          - key: language
+            label: "Language"
+
+  - rest: GET /repos/facebook/react/issues?per_page=5&state=open
+    title: "View Open Issues"
+    description: "Browse recent open issues from the React repository"
+    results:
+      - key: ""
+        label: "Issues"
+        type: table
+        columns:
+          - key: number
+            label: "#"
+          - key: title
+            label: "Title"
+          - key: user.login
+            label: "Author"
+          - key: comments
+            label: "Comments"
+
+  - slide: |
+      # Custom Link Handlers
+
+      This demo configured a `github` link handler in `settings.links`:
+
+      ```yaml
+      settings:
+        links:
+          github:
+            user: "https://github.com/{value}"
+            repo: "https://github.com/{value}"
+            issue: "https://github.com/facebook/react/issues/{value}"
+      ```
+
+      Then used it in results:
+
+      ```yaml
+      results:
+        - key: login
+          type: address
+          link: github
+      ```
+
+      The `{value}` placeholder is replaced with the actual value.
+
+    title: "How It Works"
+
+  - slide: |
+      # Demo Complete!
+
+      ### Summary
+
+      | Item | Value |
+      |------|-------|
+      | User | **$userName** |
+      | Public Repos | $userRepos |
+      | First Repo | $firstRepoName |
+
+      ### Key Takeaway
+
+      Link handlers let you create clickable links to any external service
+      (GitHub, Jira, AWS, blockchain explorers, etc.) using simple YAML config.
+
+    title: "Summary"

@@ -1,0 +1,449 @@
+# DemoScript Feature Showcase
+# Comprehensive tour of ALL DemoScript features: step types, effects, forms, and more
+
+title: "DemoScript Feature Showcase"
+description: "Complete tour of all step types, visual effects, form fields, and advanced features"
+version: "3.0"
+author: "DemoScript Team"
+tags:
+  - tutorial
+  - showcase
+  - advanced
+
+metadata:
+  duration: "10 minutes"
+  difficulty: intermediate
+  category: "Tutorial"
+
+settings:
+  base_url: "https://jsonplaceholder.typicode.com"
+
+  # Sidebar navigation (collapsible step list)
+  sidebar:
+    enabled: true       # Show sidebar navigation
+    collapsed: false    # Start expanded
+    show_status: true   # Show completion checkmarks
+
+  # Visual effects (all default to true)
+  effects:
+    confetti: true       # Fire confetti on step completion
+    sounds: true         # Play success/error sounds
+    transitions: true    # Animate step changes
+    counters: true       # Animate numeric values
+    neon_glow: true      # Neon text effects in dark mode
+    grid_background: true # Animated grid background
+    glow_orbs: true      # Floating glow orbs
+    sound_volume: 0.3    # Sound volume (0-1)
+
+  # Dashboard with live data cards and data lists
+  dashboard:
+    enabled: true
+    show_stats: true
+    show_description: true
+    data_cards:
+      - label: "API Status"
+        value: "Online"
+        type: text
+      - label: "Users"
+        url: "${base_url}/users"
+        value: length
+        type: number
+      - label: "Posts"
+        url: "${base_url}/posts"
+        value: length
+        type: number
+        poll_interval: 60000
+      - label: "API Docs"
+        url: "https://jsonplaceholder.typicode.com"
+        type: link
+    data_lists:
+      - label: "Recent Posts"
+        url: "${base_url}/posts"
+        items: ""
+        layout: cards
+        limit: 4
+        empty_message: "No posts found"
+        card:
+          badges:
+            - key: userId
+              label: "User"
+          title:
+            key: title
+            type: text
+          fields:
+            - key: id
+              label: "Post ID"
+              type: mono
+            - key: userId
+              label: "Author"
+              type: mono
+
+steps:
+  # ============================================================
+  # INTRODUCTION
+  # ============================================================
+  - slide: |
+      # Welcome to DemoScript
+
+      This demo showcases **all available features**:
+
+      | Step Type | Purpose |
+      |-----------|---------|
+      | **Slide** | Markdown content for explanations |
+      | **Code** | Syntax-highlighted code display |
+      | **Shell** | Execute commands and capture output |
+      | **REST** | Make HTTP API calls |
+      | **Browser** | Open URLs and take screenshots |
+      | **Wait** | Add timed delays |
+      | **Assert** | Validate conditions |
+
+      **Plus:** Sidebar Navigation, Visual Effects (neon glow, grid background), Form Widgets (Toggle, Slider, JSON), cURL Commands, Result Types, Error Retry, and Branching!
+
+    title: "Introduction"
+
+  # ============================================================
+  # STEP GROUP: Shell Commands
+  # ============================================================
+  - group: "Shell Commands"
+    description: "Execute shell commands and capture output"
+    steps:
+      - shell: echo "Hello from DemoScript!"
+        title: "Basic Shell"
+        description: "Run a simple echo command"
+        save:
+          greeting: stdout
+
+      - shell: date +"%Y-%m-%d %H:%M:%S"
+        title: "Current Time"
+        description: "Get the current date and time"
+        save:
+          timestamp: stdout
+
+      - shell: echo "This command requires confirmation before running"
+        title: "Confirmed Command"
+        description: "Shell step with confirm: true requires user approval"
+        confirm: true
+
+  # ============================================================
+  # STEP GROUP: REST API Calls
+  # ============================================================
+  - group: "REST API Calls"
+    description: "Make HTTP requests with forms and results"
+    steps:
+      - rest: GET /users/1
+        title: "Fetch User"
+        description: "Get a user from the JSONPlaceholder API"
+        save:
+          userName: name
+          userEmail: email
+          userId: id
+          httpStatus: _status
+        results:
+          - key: id
+            label: "User ID"
+          - key: name
+            label: "Name"
+          - key: email
+            label: "Email"
+          - key: phone
+            label: "Phone"
+
+      # REST with select dropdown
+      - rest: GET /posts
+        title: "List Posts (with Select)"
+        description: "Demonstrates select dropdown form field"
+        form:
+          - name: _limit
+            label: "Number of Posts"
+            type: select
+            default: "3"
+            options:
+              - label: "3 Posts"
+                value: "3"
+              - label: "5 Posts"
+                value: "5"
+              - label: "10 Posts"
+                value: "10"
+          - name: userId
+            label: "Filter by User"
+            type: select
+            default: "1"
+            options:
+              - label: "User 1"
+                value: "1"
+              - label: "User 2"
+                value: "2"
+              - label: "All Users"
+                value: ""
+        save:
+          postCount: length
+        results:
+          - key: "[0].title"
+            label: "First Post"
+
+      # REST with POST and form
+      - rest: POST /posts
+        title: "Create Post"
+        description: "Create a new post with form fields"
+        show_curl: true
+        form:
+          - name: title
+            label: "Post Title"
+            default: "My First Post"
+            required: true
+          - name: body
+            label: "Post Body"
+            type: textarea
+            default: "This post was created with DemoScript"
+          - name: userId
+            default: "$userId"
+            readonly: true
+            hidden: true
+        save:
+          postId: id
+        results:
+          - key: id
+            label: "Post ID"
+          - key: title
+            label: "Title"
+
+  # ============================================================
+  # NEW FORM WIDGETS: Toggle, Slider, JSON Viewer
+  # ============================================================
+  - group: "New Form Widgets"
+    description: "Toggle switches, sliders, and JSON tree viewer"
+    steps:
+      # Toggle and Slider demo
+      - rest: GET /users
+        title: "Toggle & Slider Demo"
+        description: "Demonstrates toggle switch and slider form fields"
+        form:
+          - name: includeEmail
+            label: "Include Email"
+            type: toggle
+            default: true
+          - name: includePhone
+            label: "Include Phone"
+            type: toggle
+            default: false
+          - name: _limit
+            label: "Number of Results"
+            type: slider
+            min: 1
+            max: 10
+            step: 1
+            default: 3
+        results:
+          - key: "[0].name"
+            label: "First User"
+          - key: "[0].email"
+            label: "Email"
+
+      # JSON Viewer demo
+      - rest: GET /users/1
+        title: "JSON Tree Viewer"
+        description: "Displays nested JSON as an expandable tree"
+        results:
+          - key: ""
+            label: "Full Response"
+            type: json
+            expandedDepth: 2
+          - key: "address"
+            label: "Address Object"
+            type: json
+            expandedDepth: 3
+          - key: "website"
+            label: "Website"
+            type: link
+
+  # ============================================================
+  # CODE EXAMPLES with Line Highlighting
+  # ============================================================
+  - code: |
+      // JavaScript: Fetching data from an API
+      const response = await fetch('https://api.example.com/users/1');
+      const user = await response.json();
+
+      console.log(`Hello, ${user.name}!`);
+    language: javascript
+    filename: example.js
+    title: "Code with Highlighting"
+    highlight: [2, 3]
+
+  - code: |
+      # Python: Working with REST APIs
+      import requests
+
+      response = requests.get('https://api.example.com/posts')
+      posts = response.json()
+
+      for post in posts[:5]:
+          print(f"- {post['title']}")
+    language: python
+    filename: fetch_posts.py
+    title: "Python Example"
+    highlight: [4, 5]
+
+  # ============================================================
+  # BROWSER STEP
+  # ============================================================
+  - browser: "https://jsonplaceholder.typicode.com"
+    title: "Open Website"
+    description: "Browser step opens a URL (captures screenshot when recording)"
+
+  # ============================================================
+  # WAIT STEP
+  # ============================================================
+  - wait: 2000
+    message: "Processing data..."
+    title: "Brief Pause"
+
+  # ============================================================
+  # ASSERT STEPS
+  # ============================================================
+  - group: "Assertions"
+    description: "Validate conditions and captured values"
+    steps:
+      - assert: "$userId == 1"
+        title: "Verify User ID"
+        description: "Ensure we fetched the correct user"
+
+      - assert: "$userName != ''"
+        title: "Verify User Name"
+        description: "User name should not be empty"
+
+      - assert: "$httpStatus == 200"
+        title: "Verify HTTP Status"
+        description: "API should return 200 OK"
+
+  # ============================================================
+  # EXPLICIT SYNTAX EXAMPLE
+  # ============================================================
+  - step: slide
+    content: |
+      # Explicit Syntax
+
+      DemoScript supports two syntax styles:
+
+      **Concise** (used throughout this demo):
+      ```yaml
+      - slide: |
+          # Content here
+      ```
+
+      **Explicit** (this slide uses it):
+      ```yaml
+      - step: slide
+        content: |
+          # Content here
+      ```
+
+      Both are equivalent - use whichever you prefer!
+    title: "Syntax Options"
+
+  # ============================================================
+  # BRANCHING
+  # ============================================================
+  - slide: |
+      # Choose Your Path
+
+      Would you like to see **advanced features** or jump to the **summary**?
+    title: "Choose Path"
+    choices:
+      - label: "Advanced Features"
+        description: "Learn about GraphQL, Database, OpenAPI, and Polling"
+        goto: advanced
+      - label: "Summary"
+        description: "Skip to the end"
+        goto: summary
+
+  # ============================================================
+  # ADVANCED FEATURES (Backend-Required)
+  # ============================================================
+  - id: advanced
+    slide: |
+      # Advanced Features
+
+      These step types require backend services:
+
+      ### GraphQL Step
+      ```yaml
+      - graphql: |
+          query GetUser($id: ID!) {
+            user(id: $id) { name email }
+          }
+        endpoint: "https://api.example.com/graphql"
+        variables:
+          id: "1"
+      ```
+
+      ### Database Step
+      ```yaml
+      - db: find
+        type: mongodb
+        collection: users
+        query: { active: true }
+      ```
+
+      ### OpenAPI Integration
+      ```yaml
+      settings:
+        openapi: "http://localhost:8000/docs/json"
+      ```
+      Auto-generates form fields from your API spec!
+
+      ### Polling
+      ```yaml
+      - rest: POST /jobs
+        poll:
+          endpoint: /jobs/$jobId/status
+          success_when: "status == 'complete'"
+          interval: 2000
+      ```
+    title: "Backend Features"
+    goto: summary
+
+  # ============================================================
+  # SUMMARY
+  # ============================================================
+  - id: summary
+    slide: |
+      # Demo Complete!
+
+      ### Captured Variables
+
+      | Variable | Value |
+      |----------|-------|
+      | Greeting | $greeting |
+      | Timestamp | $timestamp |
+      | User Name | $userName |
+      | User Email | $userEmail |
+      | User ID | $userId |
+      | HTTP Status | $httpStatus |
+      | Post ID | $postId |
+
+      ---
+
+      ### Features Demonstrated
+
+      - **Dashboard** - Overview screen with live data cards and lists
+      - **Data Cards** - Live stats from API with polling
+      - **Data Lists** - Recent items in cards or table layout
+      - **Step Groups** - Organize related steps
+      - **Sidebar Navigation** - Collapsible step list with status
+      - **Visual Effects** - Confetti, sounds, transitions, counters
+      - **Shell** - Commands with confirm option
+      - **REST** - Forms with text, textarea, select, toggle, slider, hidden fields
+      - **cURL Command** - Show curl command for REST requests (show_curl: true)
+      - **JSON Viewer** - Expandable tree view for nested responses
+      - **Result Types** - Address, link, code, table, currency, mono types
+      - **Code** - Syntax highlighting with line emphasis
+      - **Browser** - Open URLs and capture screenshots
+      - **Wait** - Timed delays with messages
+      - **Assert** - Validate conditions
+      - **Branching** - Choices and goto navigation
+      - **Explicit Syntax** - Alternative `step:` format
+
+      **Next:** Create your own demo with `demoscript serve examples/your-demo`!
+
+    title: "Summary"

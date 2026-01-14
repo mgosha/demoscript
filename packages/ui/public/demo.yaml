@@ -1,0 +1,120 @@
+# DemoScript Sample Demo
+# Uses JSONPlaceholder API (https://jsonplaceholder.typicode.com) - always available
+
+title: "REST API Demo"
+description: "Sample demo showing REST API calls, variable chaining, and result display"
+version: "1.0"
+author: "DemoScript"
+tags: ["api", "rest", "demo"]
+
+settings:
+  base_url: "https://jsonplaceholder.typicode.com"
+  theme:
+    primary_color: "#3B82F6"
+
+steps:
+  - slide: |
+      # REST API Demo
+
+      This demo showcases DemoScript features using the JSONPlaceholder API:
+
+      1. **Fetch Users** - List users from the API
+      2. **Get User Details** - Fetch a specific user
+      3. **Create Post** - Submit data with form inputs
+      4. **View Results** - See response handling
+
+      JSONPlaceholder is a free fake REST API for testing.
+
+    title: "Introduction"
+
+  - rest: GET /users
+    title: "List Users"
+    description: "Fetch all users from the API"
+    results:
+      - key: ""
+        label: "Users"
+        type: json
+        expandedDepth: 1
+
+  - rest: GET /users/1
+    title: "Get User Details"
+    description: "Fetch details for a specific user"
+    save:
+      userId: id
+      userName: name
+      userEmail: email
+      userCompany: company.name
+    results:
+      - key: ""
+        label: "Response"
+        type: json
+        expandedDepth: 2
+      - key: name
+        label: "Name"
+      - key: email
+        label: "Email"
+      - key: company.name
+        label: "Company"
+
+  - rest: POST /posts
+    title: "Create Post"
+    description: "Create a new post for the user"
+    form:
+      - name: title
+        label: "Post Title"
+        type: text
+        default: "Hello from DemoScript"
+        required: true
+      - name: body
+        label: "Post Content"
+        type: textarea
+        default: "This is a sample post created during the demo."
+      - name: userId
+        label: "User ID"
+        type: number
+        default: "$userId"
+        readonly: true
+    save:
+      postId: id
+      postTitle: title
+    results:
+      - key: ""
+        label: "Response"
+        type: json
+        expandedDepth: 1
+      - key: id
+        label: "Post ID"
+      - key: title
+        label: "Title"
+
+  - rest: GET /posts?userId=$userId
+    title: "Get User Posts"
+    description: "List all posts by the current user"
+    results:
+      - key: ""
+        label: "Posts"
+        type: table
+        columns:
+          - key: id
+            label: "ID"
+          - key: title
+            label: "Title"
+
+  - slide: |
+      # Demo Complete!
+
+      ### Summary
+
+      | Item | Value |
+      |------|-------|
+      | User | **$userName** |
+      | Email | $userEmail |
+      | Company | $userCompany |
+      | Created Post | "$postTitle" (ID: $postId) |
+
+      ### Variable Chaining
+
+      Notice how we saved the user ID from the first request and used it
+      in subsequent requests with `$userId`.
+
+    title: "Summary"

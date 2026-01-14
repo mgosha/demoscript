@@ -1,0 +1,312 @@
+import { useState, useRef } from 'react';
+import { useDemo } from '../context/DemoContext';
+import { substituteVariables, substituteInObject, extractValueByPath } from '../lib/variable-substitution';
+import { evaluateCondition } from '../lib/rest-helpers';
+import { parseRestMethod } from '../types/schema';
+import type { RestStep as RestStepType, ExplicitRestStep } from '../types/schema';
+import { GlowingCard } from './effects';
+
+import { useRestFormState } from '../hooks/useRestFormState';
+import { useTryItMode } from '../hooks/useTryItMode';
+import type { PollingState } from '../hooks/usePolling';
+
+import {
+  RestStepHeader,
+  RestFormFields,
+  RequestPreview,
+  PollingStatus,
+  ExecuteButtons,
+  ErrorDisplay,
+  TryItBanner,
+  ResponseDisplay,
+} from './rest';
+
+interface Props {
+  step: RestStepType | ExplicitRestStep;
+}
+
+export function RestStep({ step }: Props) {
+  const { state, dispatch, getStepStatus } = useDemo();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [pollingState, setPollingState] = useState<PollingState | null>(null);
+
+  // Use form state hook
+  const {
+    formValues,
+    setFormValues,
+    hasModifications,
+    isFieldModified,
+  } = useRestFormState({ form: step.form, variables: state.variables });
+
+  // Parse method and URL
+  const { method, endpoint } = parseRestMethod(step);
+  const resolvedEndpoint = substituteVariables(endpoint, state.variables);
+  const baseUrl = step.base_url || state.config?.settings?.base_url || '';
+  const fullUrl = `${baseUrl}${resolvedEndpoint}`;
+
+  // Use try-it mode hook
+  const {
+    isTryItMode,
+    tryItResponse,
+    tryItError,
+    isTryItExecuting,
+    handleTryIt,
+    handleReturnToRecorded,
+  } = useTryItMode({
+    step,
+    formValues,
+    variables: state.variables,
+    method,
+    fullUrl,
+  });
+
+  const status = getStepStatus(state.currentStep);
+  const response = state.stepResponses[state.currentStep];
+  const error = state.stepErrors[state.currentStep];
+
+  const getRequestBodyPreview = (): string => {
+    if (!step.form) return '';
+    const body: Record<string, string | number | boolean> = {};
+    for (const f of step.form.filter((field) => !field.hidden)) {
+      body[f.name] = formValues[f.name] ?? '';
+    }
+    return JSON.stringify(body, null, 2);
+  };
+
+  const pollForResult = async (
+    jobId: string,
+    variables: Record<string, unknown>
+  ): Promise<unknown> => {
+    if (!step.poll) {
+      throw new Error('No poll configuration');
+    }
+
+    const pollConfig = step.poll;
+    const interval = pollConfig.interval || state.config?.settings?.polling?.interval || 2000;
+    const maxAttempts = pollConfig.max_attempts || state.config?.settings?.polling?.max_attempts || 30;
+
+    const pollEndpoint = substituteVariables(
+      pollConfig.endpoint.replace('$jobId', jobId),
+      { ...variables, jobId }
+    );
+
+    setPollingState({ isPolling: true, attempt: 0, maxAttempts, status: 'polling' });
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (abortControllerRef.current?.signal.aborted) {
+        throw new Error('Polling cancelled');
+      }
+
+      setPollingState({ isPolling: true, attempt, maxAttempts, status: 'polling' });
+
+      await new Promise((resolve) => setTimeout(resolve, interval));
+
+      const pollResponse = await fetch('/api/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: JSON.stringify({
+          method: 'GET',
+          url: pollEndpoint,
+        }),
+      });
+
+      const pollResult = await pollResponse.json();
+
+      if (!pollResponse.ok) {
+        continue;
+      }
+
+      const data = pollResult.data;
+
+      if (pollConfig.success_when) {
+        const isSuccess = evaluateCondition(pollConfig.success_when, data);
+        if (isSuccess) {
+          setPollingState(null);
+          return data;
+        }
+      }
+
+      if (pollConfig.failure_when) {
+        const isFailure = evaluateCondition(pollConfig.failure_when, data);
+        if (isFailure) {
+          setPollingState(null);
+          throw new Error(`Job failed: ${JSON.stringify(data)}`);
+        }
+      }
+    }
+
+    setPollingState(null);
+    throw new Error(`Polling timeout after ${maxAttempts} attempts`);
+  };
+
+  // Save variables from response
+  // Supported special keywords: _status (HTTP status code)
+  const saveVariables = (responseData: unknown, httpStatus?: number) => {
+    if (step.save) {
+      const newVars: Record<string, unknown> = {};
+      for (const [varName, path] of Object.entries(step.save)) {
+        if (path === '_status') {
+          // Special keyword: capture HTTP status code (200, 404, etc.)
+          if (httpStatus !== undefined) {
+            newVars[varName] = httpStatus;
+          }
+        } else if (responseData) {
+          // JSON path extraction from response body
+          newVars[varName] = extractValueByPath(responseData, path);
+        }
+      }
+      if (Object.keys(newVars).length > 0) {
+        dispatch({ type: 'SET_VARIABLES', payload: newVars });
+      }
+    }
+  };
+
+  const handleExecute = async () => {
+    dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'executing' } });
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const body = step.form
+        ? Object.fromEntries(
+            step.form
+              .filter((f) => !f.hidden)
+              .map((f) => [f.name, formValues[f.name]])
+          )
+        : substituteInObject(step.body, state.variables);
+
+      if (state.mode === 'live') {
+        const proxyResponse = await fetch('/api/execute', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true',
+          },
+          body: JSON.stringify({
+            method,
+            url: fullUrl,
+            headers: substituteInObject(step.headers, state.variables),
+            body: method !== 'GET' ? body : undefined,
+          }),
+        });
+
+        const result = await proxyResponse.json();
+
+        if (!proxyResponse.ok) {
+          throw new Error(result.error || 'Request failed');
+        }
+
+        let finalResponse = result.data;
+
+        if (step.wait_for && step.poll && result.data) {
+          const jobId = extractValueByPath(result.data, step.wait_for);
+          if (jobId) {
+            const pollResult = await pollForResult(String(jobId), {
+              ...state.variables,
+              ...result.data,
+            });
+            finalResponse = { ...result.data, ...pollResult as Record<string, unknown> };
+          }
+        }
+
+        dispatch({ type: 'SET_STEP_RESPONSE', payload: { step: state.currentStep, response: finalResponse } });
+        saveVariables(finalResponse, result.status);
+        dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'complete' } });
+      } else {
+        const recording = state.recordings?.recordings.find(
+          (r) => r.stepId === `step-${state.currentStep}`
+        );
+
+        if (recording?.response?.body) {
+          await new Promise((r) => setTimeout(r, 500));
+          dispatch({ type: 'SET_STEP_RESPONSE', payload: { step: state.currentStep, response: recording.response.body } });
+          saveVariables(recording.response.body, recording.response.status);
+          dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'complete' } });
+        } else {
+          throw new Error('No recording available for this step');
+        }
+      }
+    } catch (err) {
+      setPollingState(null);
+      dispatch({ type: 'SET_STEP_ERROR', payload: { step: state.currentStep, error: err instanceof Error ? err.message : 'Unknown error' } });
+      dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'error' } });
+    }
+  };
+
+  const handleFormChange = (name: string, value: string | number | boolean) => {
+    setFormValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const isExecuting = status === 'executing';
+  const glowColor = isExecuting ? 'blue' : status === 'complete' ? 'green' : status === 'error' ? 'orange' : 'blue';
+  const showTryIt = state.mode === 'recorded' && hasModifications && !isTryItMode && state.isLiveAvailable;
+
+  return (
+    <GlowingCard isActive={isExecuting || status === 'complete'} color={glowColor} intensity="medium">
+      <div className="bg-white/90 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-slate-700/50 overflow-hidden transition-colors duration-300">
+        <RestStepHeader
+          method={method}
+          endpoint={resolvedEndpoint}
+          description={step.description}
+          status={status}
+          pollingState={pollingState}
+        />
+
+        {step.form && (
+          <RestFormFields
+            fields={step.form}
+            values={formValues}
+            onChange={handleFormChange}
+            isFieldModified={isFieldModified}
+            disabled={isExecuting}
+          />
+        )}
+
+        <RequestPreview
+          method={method}
+          url={fullUrl}
+          body={method !== 'GET' && step.form ? getRequestBodyPreview() : undefined}
+          headers={step.headers ? substituteInObject(step.headers, state.variables) as Record<string, string> : undefined}
+          showCurl={step.show_curl}
+        />
+
+        {pollingState && <PollingStatus pollingState={pollingState} />}
+
+        <ExecuteButtons
+          onExecute={handleExecute}
+          onTryIt={handleTryIt}
+          status={status}
+          isExecuting={isExecuting}
+          isTryItExecuting={isTryItExecuting}
+          pollingState={pollingState}
+          showTryIt={showTryIt}
+        />
+
+        {error && (
+          <ErrorDisplay
+            error={error}
+            onRetry={handleExecute}
+            onSkip={() => {
+              dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'complete' } });
+              dispatch({ type: 'NEXT_STEP' });
+            }}
+          />
+        )}
+
+        {isTryItMode && (
+          <TryItBanner
+            response={tryItResponse}
+            error={tryItError}
+            onReturn={handleReturnToRecorded}
+          />
+        )}
+
+        {response !== null && response !== undefined && !isTryItMode && (
+          <ResponseDisplay response={response} results={step.results} />
+        )}
+      </div>
+    </GlowingCard>
+  );
+}

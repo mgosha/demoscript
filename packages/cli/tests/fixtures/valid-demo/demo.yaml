@@ -1,0 +1,18 @@
+title: "Test Demo"
+description: "A simple demo for testing"
+version: "1.0"
+
+steps:
+  - slide: |
+      # Hello World
+
+      This is a test demo.
+
+    title: "Welcome"
+
+  - slide: |
+      # The End
+
+      Demo complete.
+
+    title: "Conclusion"

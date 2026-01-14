@@ -1,0 +1,10 @@
+title: "Invalid Demo"
+steps:
+  - slide: |
+      # Missing closing quote
+    title: "Broken Step
+  - rest: GET /api
+    # Missing required fields, malformed structure
+    form:
+      - name: test
+        type: [invalid, array, here]
