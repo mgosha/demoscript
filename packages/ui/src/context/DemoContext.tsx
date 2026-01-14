@@ -28,7 +28,7 @@ type DemoAction =
   | { type: 'PREV_STEP' }
   | { type: 'GOTO_STEP_BY_ID'; payload: string }
   | { type: 'SET_STEP_STATUS'; payload: { step: number; status: StepStatus } }
-  | { type: 'SET_STEP_ERROR'; payload: { step: number; error: string } }
+  | { type: 'SET_STEP_ERROR'; payload: { step: number; error: string | null } }
   | { type: 'SET_STEP_RESPONSE'; payload: { step: number; response: unknown } }
   | { type: 'SET_VARIABLE'; payload: { name: string; value: unknown } }
   | { type: 'SET_VARIABLES'; payload: Record<string, unknown> }
@@ -111,11 +111,15 @@ function demoReducer(state: DemoState, action: DemoAction): DemoState {
         stepStatuses: { ...state.stepStatuses, [action.payload.step]: action.payload.status },
       };
 
-    case 'SET_STEP_ERROR':
-      return {
-        ...state,
-        stepErrors: { ...state.stepErrors, [action.payload.step]: action.payload.error },
-      };
+    case 'SET_STEP_ERROR': {
+      const newErrors = { ...state.stepErrors };
+      if (action.payload.error === null) {
+        delete newErrors[action.payload.step];
+      } else {
+        newErrors[action.payload.step] = action.payload.error;
+      }
+      return { ...state, stepErrors: newErrors };
+    }
 
     case 'SET_STEP_RESPONSE':
       return {

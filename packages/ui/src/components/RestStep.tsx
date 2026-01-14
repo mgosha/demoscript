@@ -165,6 +165,8 @@ export function RestStep({ step }: Props) {
   };
 
   const handleExecute = async () => {
+    // Clear any previous error before executing
+    dispatch({ type: 'SET_STEP_ERROR', payload: { step: state.currentStep, error: null } });
     dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'executing' } });
     abortControllerRef.current = new AbortController();
 
