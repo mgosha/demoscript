@@ -32,28 +32,26 @@ export function Header() {
               <ServiceHealthHeader statuses={statuses} />
             )}
             {state.isLiveAvailable && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-purple-300/70">Mode:</span>
-                <button
-                  onClick={() =>
-                    dispatch({
-                      type: 'SET_MODE',
-                      payload: state.mode === 'live' ? 'recorded' : 'live',
-                    })
-                  }
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
-                    state.mode === 'live'
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30'
-                      : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600'
-                  }`}
-                >
-                  {state.mode === 'live' ? 'Live' : 'Recorded'}
-                </button>
-              </div>
+              <button
+                onClick={() =>
+                  dispatch({
+                    type: 'SET_MODE',
+                    payload: state.mode === 'live' ? 'recorded' : 'live',
+                  })
+                }
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                  state.mode === 'live'
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30'
+                    : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600'
+                }`}
+                title={state.mode === 'live' ? 'Click to switch to recorded responses' : 'Click to switch to live API calls'}
+              >
+                {state.mode === 'live' ? '⚡ Live API' : '📼 Recorded'}
+              </button>
             )}
             {!state.isLiveAvailable && (
               <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30">
-                Viewer Mode
+                📼 Recorded
               </span>
             )}
             <SoundToggle />
