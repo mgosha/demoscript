@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateFormFields, mergeFormFields, getEndpointInfo, type OpenApiSpec } from './openapi.js';
+import { generateFormFields, generateResultFields, mergeFormFields, getEndpointInfo, type OpenApiSpec } from './openapi.js';
 
 const mockSpec: OpenApiSpec = {
   openapi: '3.0.0',
@@ -30,7 +30,23 @@ const mockSpec: OpenApiSpec = {
           },
         },
         responses: {
-          '200': { description: 'Token created' },
+          '200': {
+            description: 'Token created',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    tokenId: { type: 'string', description: 'Token ID' },
+                    name: { type: 'string' },
+                    contractAddress: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    totalSupply: { type: 'number' },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -38,7 +54,23 @@ const mockSpec: OpenApiSpec = {
       get: {
         summary: 'List users',
         responses: {
-          '200': { description: 'Users list' },
+          '200': {
+            description: 'Users list',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
       post: {
@@ -263,5 +295,74 @@ describe('getEndpointInfo', () => {
 
     expect(info?.summary).toBe('List users');
     expect(info?.description).toBeUndefined();
+  });
+});
+
+describe('generateResultFields', () => {
+  it('generates single JSON field for object response', () => {
+    const fields = generateResultFields(mockSpec, 'POST', '/tokens');
+
+    // All responses now return a single JSON viewer
+    expect(fields).toHaveLength(1);
+    expect(fields[0].key).toBe('');
+    expect(fields[0].type).toBe('json');
+    expect(fields[0].label).toBe('Response');
+    expect(fields[0].expandedDepth).toBe(2);
+  });
+
+  it('generates single JSON field for array response', () => {
+    const fields = generateResultFields(mockSpec, 'GET', '/users');
+
+    expect(fields).toHaveLength(1);
+    expect(fields[0].key).toBe('');
+    expect(fields[0].type).toBe('json');
+    expect(fields[0].label).toBe('Response');
+    expect(fields[0].expandedDepth).toBe(2);
+  });
+
+  it('returns empty array for non-existent path', () => {
+    const fields = generateResultFields(mockSpec, 'GET', '/nonexistent');
+    expect(fields).toEqual([]);
+  });
+
+  it('returns empty array when no response schema', () => {
+    const fields = generateResultFields(mockSpec, 'POST', '/users');
+    expect(fields).toEqual([]);
+  });
+
+  it('handles path parameters', () => {
+    const specWithParams: OpenApiSpec = {
+      openapi: '3.0.0',
+      info: { title: 'Test', version: '1.0' },
+      paths: {
+        '/users/{userId}/profile': {
+          get: {
+            responses: {
+              '200': {
+                description: 'User profile',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        userId: { type: 'string' },
+                        email: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    // Test with $userId variable syntax - should find the path and return JSON field
+    const fields = generateResultFields(specWithParams, 'GET', '/users/$userId/profile');
+
+    expect(fields).toHaveLength(1);
+    expect(fields[0].type).toBe('json');
+    expect(fields[0].label).toBe('Response');
   });
 });

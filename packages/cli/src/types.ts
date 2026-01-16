@@ -15,10 +15,11 @@ export interface FormField {
 export interface ResultField {
   key: string;
   label?: string;
-  type?: 'text' | 'address' | 'tx' | 'token' | 'link' | 'currency' | 'code' | 'table';
+  type?: 'text' | 'address' | 'tx' | 'token' | 'link' | 'currency' | 'code' | 'table' | 'json' | 'mono' | 'relative_time';
   link?: string;
   format?: string;
   columns?: Array<{ key: string; label: string }>;
+  expandedDepth?: number;
 }
 
 export interface PollConfig {

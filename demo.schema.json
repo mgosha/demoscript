@@ -439,16 +439,21 @@
     },
     "ResultField": {
       "type": "object",
+      "description": "Defines how to display a response field. When auto-generated from OpenAPI, type is inferred from schema format and property name.",
       "required": ["key"],
       "properties": {
-        "key": { "type": "string" },
-        "label": { "type": "string" },
-        "type": { "enum": ["text", "address", "tx", "token", "link", "currency", "code", "table", "json", "mono", "relative_time"] },
-        "link": { "type": "string" },
+        "key": { "type": "string", "description": "JSON path to extract value (e.g., 'user.name' or '[0].id')" },
+        "label": { "type": "string", "description": "Display label (defaults to formatted key name)" },
+        "type": {
+          "enum": ["text", "address", "tx", "token", "link", "currency", "code", "table", "json", "mono", "relative_time"],
+          "description": "Display type: text (default), address/tx/token (blockchain), link, currency, code, table, json (tree view), mono (monospace), relative_time"
+        },
+        "link": { "type": "string", "description": "Link handler name (e.g., 'github', 'etherscan')" },
         "format": { "type": "string" },
         "columns": {
           "type": "array",
-          "items": { "$ref": "#/$defs/TableColumn" }
+          "items": { "$ref": "#/$defs/TableColumn" },
+          "description": "Column definitions for table type"
         },
         "expandedDepth": { "type": "integer", "minimum": 0, "description": "Levels to auto-expand in JSON viewer (default: 2)" }
       }
@@ -562,7 +567,7 @@
         "form": { "type": "array", "items": { "$ref": "#/$defs/FormField" } },
         "defaults": { "type": "object", "description": "Default values for OpenAPI-generated form fields" },
         "save": { "type": "object", "additionalProperties": { "type": "string" } },
-        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" } },
+        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" }, "description": "Fields to display from response. If omitted and OpenAPI is configured, auto-generated from response schema." },
         "wait_for": { "type": "string" },
         "poll": { "$ref": "#/$defs/PollingConfig" },
         "show_curl": { "type": "boolean", "description": "Show curl command for this request (default: false)" }
@@ -586,7 +591,7 @@
         "form": { "type": "array", "items": { "$ref": "#/$defs/FormField" } },
         "defaults": { "type": "object", "description": "Default values for OpenAPI-generated form fields" },
         "save": { "type": "object", "additionalProperties": { "type": "string" } },
-        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" } },
+        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" }, "description": "Fields to display from response. If omitted and OpenAPI is configured, auto-generated from response schema." },
         "wait_for": { "type": "string" },
         "poll": { "$ref": "#/$defs/PollingConfig" },
         "show_curl": { "type": "boolean", "description": "Show curl command for this request (default: false)" }
@@ -737,7 +742,7 @@
         "variables": { "type": "object" },
         "headers": { "type": "object", "additionalProperties": { "type": "string" } },
         "save": { "type": "object", "additionalProperties": { "type": "string" } },
-        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" } }
+        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" }, "description": "Fields to display from response. If omitted and OpenAPI is configured, auto-generated from response schema." }
       }
     },
     "GraphQLStepExplicit": {
@@ -753,7 +758,7 @@
         "variables": { "type": "object" },
         "headers": { "type": "object", "additionalProperties": { "type": "string" } },
         "save": { "type": "object", "additionalProperties": { "type": "string" } },
-        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" } }
+        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" }, "description": "Fields to display from response. If omitted and OpenAPI is configured, auto-generated from response schema." }
       }
     },
     "DatabaseStep": {
@@ -773,7 +778,7 @@
         "document": { "type": "object" },
         "projection": { "type": "object", "additionalProperties": { "type": "integer" } },
         "save": { "type": "object", "additionalProperties": { "type": "string" } },
-        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" } }
+        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" }, "description": "Fields to display from response. If omitted and OpenAPI is configured, auto-generated from response schema." }
       }
     },
     "DatabaseStepExplicit": {
@@ -794,7 +799,7 @@
         "document": { "type": "object" },
         "projection": { "type": "object", "additionalProperties": { "type": "integer" } },
         "save": { "type": "object", "additionalProperties": { "type": "string" } },
-        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" } }
+        "results": { "type": "array", "items": { "$ref": "#/$defs/ResultField" }, "description": "Fields to display from response. If omitted and OpenAPI is configured, auto-generated from response schema." }
       }
     }
   }

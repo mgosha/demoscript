@@ -1,4 +1,4 @@
-import type { FormField } from '../types.js';
+import type { FormField, ResultField } from '../types.js';
 
 // OpenAPI 3.0 Types
 
@@ -33,7 +33,10 @@ export interface OpenApiOperation {
     required?: boolean;
     content: Record<string, { schema: JsonSchema }>;
   };
-  responses: Record<string, { description: string }>;
+  responses: Record<string, {
+    description: string;
+    content?: Record<string, { schema: JsonSchema }>;
+  }>;
 }
 
 export interface OpenApiParameter {
@@ -375,4 +378,134 @@ export function getEndpointInfo(
     summary: operation.summary,
     description: operation.description,
   };
+}
+
+/**
+ * Convert camelCase/snake_case to human-readable label
+ */
+function formatLabel(name: string): string {
+  return name
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/^./, str => str.toUpperCase());
+}
+
+/**
+ * Map OpenAPI schema to DemoScript result type based on format, type, and property name
+ */
+function mapSchemaToResultType(
+  schema: JsonSchema,
+  propertyName: string
+): ResultField['type'] {
+  const nameLower = propertyName.toLowerCase();
+
+  // Array or object -> JSON tree viewer
+  if (schema.type === 'array' || schema.type === 'object') {
+    return 'json';
+  }
+
+  // Check format first (takes precedence)
+  if (schema.format) {
+    switch (schema.format) {
+      case 'date-time':
+      case 'date':
+        return 'relative_time';
+      case 'uri':
+      case 'url':
+        return 'link';
+      case 'uuid':
+        return 'mono';
+    }
+  }
+
+  // Name-based heuristics for strings
+  if (schema.type === 'string') {
+    if (nameLower.includes('url') || nameLower.includes('link') || nameLower.includes('href')) {
+      return 'link';
+    }
+    if (nameLower.includes('id') || nameLower.includes('uuid')) {
+      return 'mono';
+    }
+    // Blockchain-specific
+    if (nameLower.includes('address') || nameLower.includes('wallet')) {
+      return 'address';
+    }
+    if (nameLower.includes('hash') || nameLower.includes('txid') || nameLower === 'tx') {
+      return 'tx';
+    }
+  }
+
+  // Number-based heuristics
+  if (schema.type === 'number' || schema.type === 'integer') {
+    if (nameLower.includes('price') || nameLower.includes('amount') ||
+        nameLower.includes('balance') || nameLower.includes('total') ||
+        nameLower.includes('cost') || nameLower.includes('fee')) {
+      return 'currency';
+    }
+    if (nameLower.includes('id')) {
+      return 'mono';
+    }
+  }
+
+  return 'text';
+}
+
+/**
+ * Generate ResultField[] from an OpenAPI operation's response schema
+ *
+ * When a REST step doesn't specify `results:`, this function can auto-generate
+ * result fields from the OpenAPI response schema.
+ */
+export function generateResultFields(
+  spec: OpenApiSpec,
+  method: string,
+  path: string
+): ResultField[] {
+  const pathObj = spec.paths[path];
+  if (!pathObj) {
+    // Try with path parameters like /plvs/{plvId}/deposits
+    const normalizedPath = path.replace(/\$\w+/g, match => `{${match.slice(1)}}`);
+    const matchingPath = Object.keys(spec.paths).find(p => {
+      const pattern = p.replace(/\{[^}]+\}/g, '[^/]+');
+      return new RegExp(`^${pattern}$`).test(normalizedPath);
+    });
+    if (matchingPath) {
+      return generateResultFieldsFromPath(spec, spec.paths[matchingPath], method);
+    }
+    return [];
+  }
+
+  return generateResultFieldsFromPath(spec, pathObj, method);
+}
+
+function generateResultFieldsFromPath(
+  spec: OpenApiSpec,
+  pathObj: OpenApiPath,
+  method: string
+): ResultField[] {
+  const operation = pathObj[method.toLowerCase() as keyof OpenApiPath];
+  if (!operation) {
+    return [];
+  }
+
+  // Get 200 or 201 response
+  const successResponse = operation.responses['200'] || operation.responses['201'];
+  if (!successResponse?.content) {
+    return [];
+  }
+
+  // Get JSON response schema
+  const jsonContent = successResponse.content['application/json'];
+  if (!jsonContent?.schema) {
+    return [];
+  }
+
+  // Always show response as a collapsible JSON tree
+  // This provides a consistent experience and lets users see the full structure
+  return [{
+    key: '',
+    label: 'Response',
+    type: 'json',
+    expandedDepth: 2
+  }];
 }

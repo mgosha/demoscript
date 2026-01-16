@@ -1,10 +1,46 @@
 import { readFileSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import yaml from 'js-yaml';
-import type { DemoConfig, DemoRecordings, StepOrGroup, Step, RestStep, ExplicitRestStep } from '../types.js';
+import type { DemoConfig, DemoRecordings, StepOrGroup, Step, RestStep, ExplicitRestStep, ResultField } from '../types.js';
 import { isRestStep, isStepGroup } from '../types.js';
 import { validateDemoConfig, formatValidationErrors } from './validator.js';
 import { fetchOpenApiSpec, generateFormFields, mergeFormFields, type OpenApiSpec } from './openapi.js';
+
+/**
+ * Convert camelCase variable name to human-readable label
+ * e.g. "accessToken" -> "Access Token", "adminUserId" -> "Admin User Id"
+ */
+function formatSaveLabel(varName: string): string {
+  return varName
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/^./, str => str.toUpperCase());
+}
+
+/**
+ * Infer result display type from variable name and json path
+ */
+function inferResultType(varName: string, jsonPath: string): ResultField['type'] {
+  const nameLower = varName.toLowerCase();
+  const pathLower = jsonPath.toLowerCase();
+
+  // Token/ID fields -> mono (monospace)
+  if (nameLower.includes('token') || nameLower.includes('id') ||
+      pathLower.includes('token') || pathLower.includes('id')) {
+    return 'mono';
+  }
+
+  // Address/wallet fields
+  if (nameLower.includes('address') || nameLower.includes('wallet')) {
+    return 'address';
+  }
+
+  // URL fields
+  if (nameLower.includes('url') || nameLower.includes('link')) {
+    return 'link';
+  }
+
+  return 'text';
+}
 
 interface LoadedDemo {
   config: DemoConfig;
@@ -102,7 +138,7 @@ function processStepsArray(
 }
 
 /**
- * Process a single REST step to generate form fields from OpenAPI
+ * Process a single REST step to generate form fields and result fields from OpenAPI
  */
 function processRestStepWithOpenApi(
   step: RestStep | ExplicitRestStep,
@@ -127,22 +163,36 @@ function processRestStepWithOpenApi(
     path = step.path;
   }
 
-  // Generate form fields from OpenAPI
+  // Generate form fields from OpenAPI request body schema
   const openapiFields = generateFormFields(spec, method, path);
 
-  if (openapiFields.length === 0) {
+  // Generate result fields from save mappings (only if results not specified)
+  // This shows what variables were captured from the response
+  let results = step.results;
+  if (!results || results.length === 0) {
+    if (step.save && Object.keys(step.save).length > 0) {
+      // Generate results from save mappings
+      results = Object.entries(step.save).map(([varName, jsonPath]) => ({
+        key: jsonPath as string,
+        label: formatSaveLabel(varName),
+        type: inferResultType(varName, jsonPath as string)
+      }));
+    }
+  }
+
+  // If no OpenAPI data found, return step unchanged
+  if (openapiFields.length === 0 && !results) {
     return step;
   }
 
-  // Merge with defaults and manual form fields
-  const mergedFields = mergeFormFields(
-    openapiFields,
-    step.defaults,
-    step.form
-  );
+  // Merge form fields with defaults and manual overrides
+  const mergedFields = openapiFields.length > 0
+    ? mergeFormFields(openapiFields, step.defaults, step.form)
+    : step.form;
 
   return {
     ...step,
-    form: mergedFields
+    form: mergedFields || step.form,
+    results: results || step.results
   };
 }
