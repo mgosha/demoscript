@@ -1,4 +1,4 @@
-# DemoScript - Development Guidelines
+# DemoScript - Development Guiaines
 
 ## IMPORTANT: Two Repositories
 
@@ -15,8 +15,14 @@ This project has TWO separate repositories with different purposes:
 
 **When syncing changes:**
 - UI improvements (styling, UX) → sync to BOTH repos
-- Cloud-specific code (cloud-execute.ts, window.IS_CLOUD checks) → private repo ONLY
+- Cloud-specific code → private repo ONLY
 - New free features → public repo first, then merge to private
+
+**IMPORTANT: `execute-adapter.ts` differs between repos:**
+- `packages/ui/src/lib/execute-adapter.ts` is the ONLY UI file that differs
+- Private: Cloud-aware version (routes through proxy when `window.IS_CLOUD` is set)
+- Public: Local-only version (always uses `/api/execute`)
+- After syncing with rsync, RESTORE the public version: `git checkout packages/ui/src/lib/execute-adapter.ts`
 
 See `docs/GO-TO-MARKET.md` for the full Open Core strategy.
 
