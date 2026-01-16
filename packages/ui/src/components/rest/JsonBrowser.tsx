@@ -4,6 +4,7 @@ interface JsonBrowserProps {
   data: unknown;
   defaultExpandedDepth?: number;
   maxHeight?: string;
+  className?: string;
 }
 
 interface JsonNodeProps {
@@ -303,7 +304,7 @@ function getAllExpandablePaths(data: unknown, currentPath = ''): string[] {
   return paths;
 }
 
-export function JsonBrowser({ data, defaultExpandedDepth = 2, maxHeight = '400px' }: JsonBrowserProps) {
+export function JsonBrowser({ data, defaultExpandedDepth = 2, maxHeight = '400px', className }: JsonBrowserProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -367,7 +368,7 @@ export function JsonBrowser({ data, defaultExpandedDepth = 2, maxHeight = '400px
   }, []);
 
   return (
-    <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
+    <div className={`border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden ${className || ''}`}>
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
         {/* Search */}
@@ -440,7 +441,7 @@ export function JsonBrowser({ data, defaultExpandedDepth = 2, maxHeight = '400px
 
       {/* JSON Tree */}
       <div
-        className="p-3 bg-gray-50 dark:bg-slate-900/50 font-mono text-sm overflow-auto"
+        className={`p-3 bg-gray-50 dark:bg-slate-900/50 font-mono text-sm overflow-auto ${className || ''}`}
         style={{ maxHeight }}
       >
         <JsonNode

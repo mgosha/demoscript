@@ -7,6 +7,8 @@ import type { ResultField } from '../../types/schema';
 interface Props {
   response: unknown;
   results?: ResultField[];
+  hideResults?: boolean;
+  hideResultsOnDesktop?: boolean;
 }
 
 function getResponseSummary(response: unknown): string {
@@ -27,16 +29,17 @@ function getResponseSummary(response: unknown): string {
   return sizeStr;
 }
 
-export function ResponseDisplay({ response, results }: Props) {
+export function ResponseDisplay({ response, results, hideResults, hideResultsOnDesktop }: Props) {
   const responseSummary = getResponseSummary(response);
 
   return (
     <div className="border-t border-gray-200 dark:border-slate-700/50 p-4 bg-gray-50/50 dark:bg-slate-900/30 space-y-3">
       <CollapsibleSection title="Response" summary={responseSummary} defaultExpanded={true}>
-        <JsonBrowser data={response} defaultExpandedDepth={2} maxHeight="320px" />
+        <JsonBrowser data={response} defaultExpandedDepth={2} maxHeight="320px" className="xl:!max-h-[600px]" />
       </CollapsibleSection>
 
-      {results && results.length > 0 && (
+      {!hideResults && results && results.length > 0 && (
+        <div className={hideResultsOnDesktop ? 'xl:hidden' : ''}>
         <CollapsibleSection
           title="Results"
           summary={`${results.length} field${results.length > 1 ? 's' : ''}`}
@@ -79,6 +82,7 @@ export function ResponseDisplay({ response, results }: Props) {
             })}
           </div>
         </CollapsibleSection>
+        </div>
       )}
     </div>
   );

@@ -20,6 +20,7 @@ import {
   ErrorDisplay,
   TryItBanner,
   ResponseDisplay,
+  ResultsDisplay,
   MissingVariablesBanner,
 } from './rest';
 
@@ -272,6 +273,9 @@ export function RestStep({ step }: Props) {
   const glowColor = isExecuting ? 'blue' : status === 'complete' ? 'green' : status === 'error' ? 'orange' : 'blue';
   const showTryIt = state.mode === 'recorded' && hasModifications && !isTryItMode && state.isLiveAvailable;
 
+  // Check if we have output to show (for two-column layout)
+  const hasOutput = (response !== null && response !== undefined && !isTryItMode) || isTryItMode;
+
   return (
     <GlowingCard isActive={isExecuting || status === 'complete'} color={glowColor} intensity="medium">
       <div className="bg-white/90 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-slate-700/50 overflow-hidden transition-colors duration-300">
@@ -283,64 +287,82 @@ export function RestStep({ step }: Props) {
           pollingState={pollingState}
         />
 
-        {step.form && (
-          <RestFormFields
-            fields={step.form}
-            values={formValues}
-            onChange={handleFormChange}
-            isFieldModified={isFieldModified}
-            disabled={isExecuting}
-          />
-        )}
+        {/* Two-column layout on desktop when there's output */}
+        <div className={hasOutput ? 'xl:grid xl:grid-cols-2' : ''}>
+          {/* Left column: inputs and controls */}
+          <div className={hasOutput ? 'xl:pr-4' : ''}>
+            {step.form && (
+              <RestFormFields
+                fields={step.form}
+                values={formValues}
+                onChange={handleFormChange}
+                isFieldModified={isFieldModified}
+                disabled={isExecuting}
+              />
+            )}
 
-        <RequestPreview
-          method={method}
-          url={fullUrl}
-          body={method !== 'GET' && step.form ? getRequestBodyPreview() : undefined}
-          headers={step.headers ? substituteInObject(step.headers, state.variables) as Record<string, string> : undefined}
-          showCurl={step.show_curl}
-        />
+            <RequestPreview
+              method={method}
+              url={fullUrl}
+              body={method !== 'GET' && step.form ? getRequestBodyPreview() : undefined}
+              headers={step.headers ? substituteInObject(step.headers, state.variables) as Record<string, string> : undefined}
+              showCurl={step.show_curl}
+            />
 
-        {pollingState && <PollingStatus pollingState={pollingState} />}
+            {pollingState && <PollingStatus pollingState={pollingState} />}
 
-        {missingVariables.length > 0 && status === 'pending' && (
-          <div className="px-4 pb-2">
-            <MissingVariablesBanner missingVariables={missingVariables} />
+            {missingVariables.length > 0 && status === 'pending' && (
+              <div className="px-4 pb-2">
+                <MissingVariablesBanner missingVariables={missingVariables} />
+              </div>
+            )}
+
+            <ExecuteButtons
+              onExecute={handleExecute}
+              onTryIt={handleTryIt}
+              status={status}
+              isExecuting={isExecuting}
+              isTryItExecuting={isTryItExecuting}
+              pollingState={pollingState}
+              showTryIt={showTryIt}
+            />
+
+            {error && (
+              <ErrorDisplay
+                error={error}
+                onRetry={handleExecute}
+                onSkip={() => {
+                  dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'complete' } });
+                  dispatch({ type: 'NEXT_STEP' });
+                }}
+              />
+            )}
+
+            {/* Results in left column on desktop */}
+            {response !== null && response !== undefined && step.results && step.results.length > 0 && !isTryItMode && (
+              <div className="hidden xl:block">
+                <ResultsDisplay response={response} results={step.results} />
+              </div>
+            )}
           </div>
-        )}
 
-        <ExecuteButtons
-          onExecute={handleExecute}
-          onTryIt={handleTryIt}
-          status={status}
-          isExecuting={isExecuting}
-          isTryItExecuting={isTryItExecuting}
-          pollingState={pollingState}
-          showTryIt={showTryIt}
-        />
+          {/* Right column: outputs (visible on desktop when there's output) */}
+          {hasOutput && (
+            <div className="xl:border-l xl:border-gray-200 xl:dark:border-slate-700/50">
+              {isTryItMode && (
+                <TryItBanner
+                  response={tryItResponse}
+                  error={tryItError}
+                  onReturn={handleReturnToRecorded}
+                />
+              )}
 
-        {error && (
-          <ErrorDisplay
-            error={error}
-            onRetry={handleExecute}
-            onSkip={() => {
-              dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'complete' } });
-              dispatch({ type: 'NEXT_STEP' });
-            }}
-          />
-        )}
-
-        {isTryItMode && (
-          <TryItBanner
-            response={tryItResponse}
-            error={tryItError}
-            onReturn={handleReturnToRecorded}
-          />
-        )}
-
-        {response !== null && response !== undefined && !isTryItMode && (
-          <ResponseDisplay response={response} results={step.results} />
-        )}
+              {response !== null && response !== undefined && !isTryItMode && (
+                <ResponseDisplay response={response} results={step.results} hideResultsOnDesktop />
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </GlowingCard>
   );

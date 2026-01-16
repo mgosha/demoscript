@@ -6,6 +6,7 @@ export { RestFormFields } from './RestFormFields';
 export { ErrorDisplay } from './ErrorDisplay';
 export { TryItBanner } from './TryItBanner';
 export { ResponseDisplay } from './ResponseDisplay';
+export { ResultsDisplay } from './ResultsDisplay';
 export { ExecuteButtons } from './ExecuteButtons';
 export { CurlCommand } from './CurlCommand';
 export { MissingVariablesBanner } from './MissingVariablesBanner';

@@ -117,7 +117,7 @@ function DemoContent() {
         }`}
       >
         <Header />
-        <main className="flex-1 container mx-auto px-4 py-6 max-w-5xl">
+        <main className="flex-1 mx-auto px-4 py-6 xl:px-8 max-w-5xl xl:max-w-[85vw] 2xl:max-w-[80vw]">
           <Stepper />
           <div className="mt-6">
             <StepViewer />
