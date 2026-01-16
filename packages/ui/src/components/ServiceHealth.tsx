@@ -14,7 +14,7 @@ export function ServiceHealth({ statuses, compact = false }: ServiceHealthProps)
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="flex flex-wrap gap-4">
       {statuses.map((status) => (
         <ServiceHealthCard key={status.url} status={status} />
       ))}
@@ -28,7 +28,7 @@ function ServiceHealthCard({ status }: { status: HealthStatus }) {
 
   return (
     <div className={`
-      rounded-lg border p-4 transition-all duration-200
+      rounded-lg border p-4 transition-all duration-200 max-w-md
       ${isHealthy
         ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-500/30'
         : isChecking
@@ -36,19 +36,25 @@ function ServiceHealthCard({ status }: { status: HealthStatus }) {
           : 'bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-500/30'
       }
     `}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <StatusIndicator healthy={status.healthy} />
-          <div>
-            <h4 className="font-medium text-slate-800 dark:text-slate-200">
+          <div className="min-w-0">
+            <h4
+              className="font-medium text-slate-800 dark:text-slate-200 truncate"
+              title={status.name}
+            >
               {status.name}
             </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
+            <p
+              className="text-xs text-slate-500 dark:text-slate-400 truncate"
+              title={status.url}
+            >
               {status.url}
             </p>
           </div>
         </div>
-        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+        <span className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${
           isHealthy
             ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
             : isChecking
@@ -59,7 +65,10 @@ function ServiceHealthCard({ status }: { status: HealthStatus }) {
         </span>
       </div>
       {status.error && (
-        <p className="mt-2 text-xs text-red-600 dark:text-red-400 truncate">
+        <p
+          className="mt-2 text-xs text-red-600 dark:text-red-400 truncate"
+          title={status.error}
+        >
           {status.error}
         </p>
       )}

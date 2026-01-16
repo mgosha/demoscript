@@ -12,6 +12,7 @@ import { Sidebar } from './Sidebar';
 import { GridBackground, GlowOrbs } from './effects';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { normalizeConfig } from '../lib/normalize-config';
+import { isCloudMode } from '../lib/execute-adapter';
 import type { DemoConfig, AuthSettings, EffectsSettings } from '../types/schema';
 
 // Background effects wrapper
@@ -28,10 +29,15 @@ function BackgroundEffects({ effects }: { effects?: EffectsSettings }) {
 }
 
 // For development, we'll load the demo config from window or fetch it
+// Cloud mode adds IS_CLOUD, CLOUD_PROXY_URL, DEMO_ID, DEMO_MODE for proxy execution
 declare global {
   interface Window {
     DEMO_CONFIG?: DemoConfig;
     DEMO_RECORDINGS?: unknown;
+    IS_CLOUD?: boolean;
+    CLOUD_PROXY_URL?: string;
+    DEMO_ID?: string;
+    DEMO_MODE?: 'live' | 'recorded';
   }
 }
 
@@ -132,13 +138,18 @@ export function DemoRunner() {
 
   useEffect(() => {
     async function loadDemo() {
-      // Check if config is embedded (static build)
+      // Check if config is embedded (static build or cloud)
       if (window.DEMO_CONFIG) {
         const config = normalizeConfig(window.DEMO_CONFIG);
         dispatch({ type: 'SET_CONFIG', payload: config });
         setAuthSettings(config.settings?.auth);
         if (window.DEMO_RECORDINGS) {
           dispatch({ type: 'SET_RECORDINGS', payload: window.DEMO_RECORDINGS as never });
+        }
+        // Cloud mode: check DEMO_MODE for live execution
+        if (isCloudMode() && window.DEMO_MODE === 'live') {
+          dispatch({ type: 'SET_LIVE_AVAILABLE', payload: true });
+          dispatch({ type: 'SET_MODE', payload: 'live' });
         }
         return;
       }

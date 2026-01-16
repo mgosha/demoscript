@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { substituteVariables } from '../lib/variable-substitution';
 import { evaluateCondition } from '../lib/rest-helpers';
+import { executeRequest } from '../lib/execute-adapter';
 import type { PollingConfig } from '../types/schema';
 
 export interface PollingState {
@@ -61,21 +62,12 @@ export function usePolling({
       await new Promise((resolve) => setTimeout(resolve, interval));
 
       // Make poll request
-      const pollResponse = await fetch('/api/execute', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify({
-          method: 'GET',
-          url: pollEndpoint,
-        }),
+      const pollResult = await executeRequest({
+        method: 'GET',
+        url: pollEndpoint,
       });
 
-      const pollResult = await pollResponse.json();
-
-      if (!pollResponse.ok) {
+      if (pollResult.status >= 400) {
         continue; // Keep trying on error
       }
 

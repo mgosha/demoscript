@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { useDemo } from '../context/DemoContext';
-import { substituteVariables, substituteInObject, extractValueByPath } from '../lib/variable-substitution';
+import { substituteVariables, substituteInObject, extractValueByPath, findVariablesInObject, findMissingVariables } from '../lib/variable-substitution';
 import { evaluateCondition } from '../lib/rest-helpers';
+import { executeRequest } from '../lib/execute-adapter';
 import { parseRestMethod } from '../types/schema';
 import type { RestStep as RestStepType, ExplicitRestStep } from '../types/schema';
 import { GlowingCard } from './effects';
@@ -19,6 +20,7 @@ import {
   ErrorDisplay,
   TryItBanner,
   ResponseDisplay,
+  MissingVariablesBanner,
 } from './rest';
 
 interface Props {
@@ -26,7 +28,7 @@ interface Props {
 }
 
 export function RestStep({ step }: Props) {
-  const { state, dispatch, getStepStatus } = useDemo();
+  const { state, dispatch, getStepStatus, getVariableProvider } = useDemo();
   const abortControllerRef = useRef<AbortController | null>(null);
   const [pollingState, setPollingState] = useState<PollingState | null>(null);
 
@@ -64,11 +66,28 @@ export function RestStep({ step }: Props) {
   const response = state.stepResponses[state.currentStep];
   const error = state.stepErrors[state.currentStep];
 
+  // Calculate missing variables for this step
+  const usedVariables = [
+    ...findVariablesInObject(endpoint),
+    ...findVariablesInObject(step.body),
+    ...findVariablesInObject(step.headers),
+    ...findVariablesInObject(step.form?.map(f => f.default)),
+  ];
+  const missingVarNames = findMissingVariables(usedVariables, state.variables);
+  const missingVariables = missingVarNames.map(name => ({
+    name,
+    provider: getVariableProvider(name),
+  }));
+
   const getRequestBodyPreview = (): string => {
     if (!step.form) return '';
     const body: Record<string, string | number | boolean> = {};
     for (const f of step.form.filter((field) => !field.hidden)) {
-      body[f.name] = formValues[f.name] ?? '';
+      const value = formValues[f.name];
+      // Only include required fields or fields with non-empty values
+      if (f.required || (value !== '' && value !== undefined && value !== null)) {
+        body[f.name] = value ?? '';
+      }
     }
     return JSON.stringify(body, null, 2);
   };
@@ -101,21 +120,12 @@ export function RestStep({ step }: Props) {
 
       await new Promise((resolve) => setTimeout(resolve, interval));
 
-      const pollResponse = await fetch('/api/execute', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify({
-          method: 'GET',
-          url: pollEndpoint,
-        }),
+      const pollResult = await executeRequest({
+        method: 'GET',
+        url: pollEndpoint,
       });
 
-      const pollResult = await pollResponse.json();
-
-      if (!pollResponse.ok) {
+      if (pollResult.status >= 400) {
         continue;
       }
 
@@ -175,29 +185,25 @@ export function RestStep({ step }: Props) {
         ? Object.fromEntries(
             step.form
               .filter((f) => !f.hidden)
+              .filter((f) => {
+                const value = formValues[f.name];
+                // Keep required fields, or fields with non-empty values
+                return f.required || (value !== '' && value !== undefined && value !== null);
+              })
               .map((f) => [f.name, formValues[f.name]])
           )
         : substituteInObject(step.body, state.variables);
 
       if (state.mode === 'live') {
-        const proxyResponse = await fetch('/api/execute', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-          body: JSON.stringify({
-            method,
-            url: fullUrl,
-            headers: substituteInObject(step.headers, state.variables),
-            body: method !== 'GET' ? body : undefined,
-          }),
+        const result = await executeRequest({
+          method,
+          url: fullUrl,
+          headers: substituteInObject(step.headers, state.variables) as Record<string, string>,
+          body: method !== 'GET' ? body : undefined,
         });
 
-        const result = await proxyResponse.json();
-
-        if (!proxyResponse.ok) {
-          throw new Error(result.error || 'Request failed');
+        if (result.error) {
+          throw new Error(result.error);
         }
 
         let finalResponse = result.data;
@@ -215,7 +221,17 @@ export function RestStep({ step }: Props) {
 
         dispatch({ type: 'SET_STEP_RESPONSE', payload: { step: state.currentStep, response: finalResponse } });
         saveVariables(finalResponse, result.status);
-        dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'complete' } });
+
+        // Check if the API returned an error status code
+        if (result.status >= 400) {
+          const errorMsg = typeof finalResponse === 'object' && finalResponse !== null
+            ? (finalResponse as Record<string, unknown>).error || (finalResponse as Record<string, unknown>).detail || (finalResponse as Record<string, unknown>).message || `HTTP ${result.status}`
+            : `HTTP ${result.status}`;
+          dispatch({ type: 'SET_STEP_ERROR', payload: { step: state.currentStep, error: String(errorMsg) } });
+          dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'error' } });
+        } else {
+          dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'complete' } });
+        }
       } else {
         const recording = state.recordings?.recordings.find(
           (r) => r.stepId === `step-${state.currentStep}`
@@ -225,7 +241,18 @@ export function RestStep({ step }: Props) {
           await new Promise((r) => setTimeout(r, 500));
           dispatch({ type: 'SET_STEP_RESPONSE', payload: { step: state.currentStep, response: recording.response.body } });
           saveVariables(recording.response.body, recording.response.status);
-          dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'complete' } });
+
+          // Check if the recorded response was an error
+          if (recording.response.status && recording.response.status >= 400) {
+            const body = recording.response.body;
+            const errorMsg = typeof body === 'object' && body !== null
+              ? (body as Record<string, unknown>).error || (body as Record<string, unknown>).detail || (body as Record<string, unknown>).message || `HTTP ${recording.response.status}`
+              : `HTTP ${recording.response.status}`;
+            dispatch({ type: 'SET_STEP_ERROR', payload: { step: state.currentStep, error: String(errorMsg) } });
+            dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'error' } });
+          } else {
+            dispatch({ type: 'SET_STEP_STATUS', payload: { step: state.currentStep, status: 'complete' } });
+          }
         } else {
           throw new Error('No recording available for this step');
         }
@@ -275,6 +302,12 @@ export function RestStep({ step }: Props) {
         />
 
         {pollingState && <PollingStatus pollingState={pollingState} />}
+
+        {missingVariables.length > 0 && status === 'pending' && (
+          <div className="px-4 pb-2">
+            <MissingVariablesBanner missingVariables={missingVariables} />
+          </div>
+        )}
 
         <ExecuteButtons
           onExecute={handleExecute}

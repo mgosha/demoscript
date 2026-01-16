@@ -443,7 +443,7 @@
       "properties": {
         "key": { "type": "string" },
         "label": { "type": "string" },
-        "type": { "enum": ["text", "address", "tx", "token", "link", "currency", "code", "table", "json"] },
+        "type": { "enum": ["text", "address", "tx", "token", "link", "currency", "code", "table", "json", "mono", "relative_time"] },
         "link": { "type": "string" },
         "format": { "type": "string" },
         "columns": {

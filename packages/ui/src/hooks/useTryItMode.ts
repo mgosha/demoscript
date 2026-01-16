@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { substituteInObject } from '../lib/variable-substitution';
+import { executeRequest } from '../lib/execute-adapter';
 import type { RestStep as RestStepType, ExplicitRestStep } from '../types/schema';
 
 interface UseTryItModeProps {
@@ -46,24 +47,15 @@ export function useTryItMode({
           )
         : substituteInObject(step.body, variables);
 
-      const proxyResponse = await fetch('/api/execute', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify({
-          method,
-          url: fullUrl,
-          headers: substituteInObject(step.headers, variables),
-          body: method !== 'GET' ? body : undefined,
-        }),
+      const result = await executeRequest({
+        method,
+        url: fullUrl,
+        headers: substituteInObject(step.headers, variables) as Record<string, string>,
+        body: method !== 'GET' ? body : undefined,
       });
 
-      const result = await proxyResponse.json();
-
-      if (!proxyResponse.ok) {
-        throw new Error(result.error || 'Request failed');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
       setTryItResponse(result.data);

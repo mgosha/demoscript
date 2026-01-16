@@ -1,6 +1,12 @@
 import { createContext, useContext, useReducer, ReactNode, useState, useCallback, useMemo } from 'react';
 import type { DemoConfig, DemoRecordings, StepOrGroup, Step, Recording, StepGroup } from '../types/schema';
-import { isStepGroup, flattenSteps } from '../types/schema';
+import { isStepGroup, flattenSteps, getStepTitle } from '../types/schema';
+
+// Info about which step provides a variable
+export interface VariableProvider {
+  stepIndex: number;
+  stepTitle: string;
+}
 
 export type ExecutionMode = 'live' | 'recorded';
 export type StepStatus = 'pending' | 'executing' | 'complete' | 'error';
@@ -18,6 +24,7 @@ interface DemoState {
   stepIdMap: Map<string, number>;  // Maps step IDs to flat indices
   flatSteps: Step[];  // Flattened array of all steps
   sidebarCollapsed: boolean;  // Sidebar navigation state
+  variableProviders: Map<string, VariableProvider>;  // Maps variable names to their provider step
 }
 
 type DemoAction =
@@ -50,6 +57,7 @@ const initialState: DemoState = {
   stepIdMap: new Map(),
   flatSteps: [],
   sidebarCollapsed: false,
+  variableProviders: new Map(),
 };
 
 // Helper to build step ID map from flattened steps
@@ -63,6 +71,25 @@ function buildStepIdMap(flatSteps: Step[]): Map<string, number> {
   return map;
 }
 
+// Helper to build variable providers map from flattened steps
+function buildVariableProviders(flatSteps: Step[]): Map<string, VariableProvider> {
+  const map = new Map<string, VariableProvider>();
+  flatSteps.forEach((step, index) => {
+    // Check for 'save' property on REST and shell steps
+    if ('save' in step && step.save) {
+      const saveConfig = step.save as Record<string, string>;
+      for (const varName of Object.keys(saveConfig)) {
+        map.set(varName, {
+          stepIndex: index,
+          stepTitle: getStepTitle(step, index),
+        });
+      }
+    }
+  });
+  return map;
+}
+
+
 function demoReducer(state: DemoState, action: DemoAction): DemoState {
   switch (action.type) {
     case 'SET_CONFIG': {
@@ -74,6 +101,7 @@ function demoReducer(state: DemoState, action: DemoAction): DemoState {
         config: action.payload,
         flatSteps,
         stepIdMap: buildStepIdMap(flatSteps),
+        variableProviders: buildVariableProviders(flatSteps),
         sidebarCollapsed,
       };
     }
@@ -216,6 +244,7 @@ interface DemoContextValue {
   getStepStatus: (step: number) => StepStatus;
   gotoStepById: (id: string) => void;
   hasStepId: (id: string) => boolean;
+  getVariableProvider: (varName: string) => VariableProvider | undefined;
   // Group expansion
   expandedGroups: Record<number, boolean>;
   toggleGroup: (groupIndex: number) => void;
@@ -272,6 +301,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     return state.stepIdMap.has(id);
   };
 
+  const getVariableProvider = (varName: string): VariableProvider | undefined => {
+    return state.variableProviders.get(varName);
+  };
+
   // Build stepper structure for rendering
   const stepperStructure = useMemo(() => {
     if (!state.config) return [];
@@ -291,6 +324,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         getStepStatus,
         gotoStepById,
         hasStepId,
+        getVariableProvider,
         expandedGroups,
         toggleGroup,
         stepperStructure,

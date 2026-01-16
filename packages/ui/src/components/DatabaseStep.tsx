@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDemo } from '../context/DemoContext';
 import { substituteVariables, substituteInObject, extractValueByPath } from '../lib/variable-substitution';
+import { isStepTypeSupported, getUnsupportedMessage } from '../lib/execute-adapter';
 import type { DatabaseStep as DatabaseStepType, ExplicitDatabaseStep } from '../types/schema';
 import { getDatabaseOperation } from '../types/schema';
 import { GlowingCard, SuccessCheck } from './effects';
@@ -188,6 +189,20 @@ export function DatabaseStep({ step }: Props) {
           </div>
         )}
 
+        {/* Unsupported step warning */}
+        {!isStepTypeSupported('database') && state.mode === 'live' && (
+          <div className="px-6 py-3 bg-amber-50 dark:bg-amber-500/10 border-b border-amber-200 dark:border-amber-500/30">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                {getUnsupportedMessage('database')}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Operation display */}
         <div className="p-4 border-b border-gray-200 dark:border-slate-700/50">
           <div className="flex items-center gap-2 mb-2">
@@ -237,7 +252,7 @@ export function DatabaseStep({ step }: Props) {
         <div className="p-4 border-b border-gray-200 dark:border-slate-700/50">
           <button
             onClick={handleExecute}
-            disabled={status === 'executing'}
+            disabled={status === 'executing' || (!isStepTypeSupported('database') && state.mode === 'live')}
             className="w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium rounded-lg hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/25 transition-all duration-300 flex items-center justify-center gap-2"
           >
             {status === 'executing' ? (
