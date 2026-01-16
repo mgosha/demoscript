@@ -3,12 +3,15 @@
 import { Command } from 'commander';
 import { serve } from './commands/serve.js';
 
+// Version injected at build time by esbuild
+declare const __PKG_VERSION__: string;
+
 const program = new Command();
 
 program
   .name('demoscript')
   .description('Framework for creating scripted, shareable product demonstrations')
-  .version('0.1.0');
+  .version(__PKG_VERSION__);
 
 program
   .command('serve <demo>')

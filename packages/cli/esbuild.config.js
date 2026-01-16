@@ -1,5 +1,8 @@
 import * as esbuild from 'esbuild';
-import { writeFileSync, mkdirSync } from 'fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'fs';
+
+// Read version from package.json at build time
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 // Dependencies that must stay external:
 // - Native binaries (ffmpeg-static)
@@ -18,9 +21,10 @@ await esbuild.build({
   format: 'cjs',
   outfile: 'dist/bundle.cjs',
   external: externalDeps,
-  // Inject import.meta.url polyfill for CJS
+  // Inject import.meta.url polyfill for CJS and version constant
   define: {
     'import.meta.url': 'importMetaUrl',
+    '__PKG_VERSION__': JSON.stringify(pkg.version),
   },
   banner: {
     js: 'const importMetaUrl = require("url").pathToFileURL(__filename).href;',
