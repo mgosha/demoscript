@@ -18,11 +18,18 @@ This project has TWO separate repositories with different purposes:
 - Cloud-specific code → private repo ONLY
 - New free features → public repo first, then merge to private
 
-**IMPORTANT: `execute-adapter.ts` differs between repos:**
-- `packages/ui/src/lib/execute-adapter.ts` is the ONLY UI file that differs
-- Private: Cloud-aware version (routes through proxy when `window.IS_CLOUD` is set)
-- Public: Local-only version (always uses `/api/execute`)
-- After syncing with rsync, RESTORE the public version: `git checkout packages/ui/src/lib/execute-adapter.ts`
+**Syncing to public repo:**
+```bash
+# Use the sync script (handles all exclusions automatically)
+./scripts/sync-to-public.sh           # Sync and show changes
+./scripts/sync-to-public.sh --commit  # Sync and auto-commit
+./scripts/sync-to-public.sh --dry-run # Preview what would change
+```
+
+**Files that differ between repos:**
+- `packages/ui/src/lib/execute-adapter.ts` - Private has cloud proxy, public is local-only
+- `packages/cli/src/index.ts` - Private has all commands, public has only `serve`
+- `packages/cli/src/commands/serve.ts` - Private has tunnel options
 
 See `docs/GO-TO-MARKET.md` for the full Open Core strategy.
 
