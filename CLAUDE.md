@@ -11,7 +11,7 @@ This project has TWO separate repositories with different purposes:
 
 **Key differences:**
 - **Private repo** contains: cloud proxy code (`packages/cloud`), cloud-execute helpers, Pro/Team features
-- **Public repo** contains: basic CLI (`serve` only), UI viewer, effects - NO build/record/deploy/tunnel commands
+- **Public repo** contains: basic CLI (`serve`, `login`, `logout`, `whoami`, `push`), UI viewer, effects - NO build/record/deploy/tunnel commands
 
 **When syncing changes:**
 - UI improvements (styling, UX) → sync to BOTH repos
@@ -110,6 +110,22 @@ The `npm run build` command builds UI and CLI separately but doesn't sync the UI
 - You may see blank screens or stale CSS/JS
 
 The `build.sh` script handles this automatically.
+
+## Cloud Deployment
+
+The Cloudflare Worker (`packages/cloud`) can be deployed via build.sh:
+
+```bash
+# Deploy cloud worker only (quick)
+./build.sh --cloud
+
+# Build everything + deploy cloud worker
+./build.sh --deploy
+```
+
+The script auto-sources `.envrc` for `CLOUDFLARE_API_TOKEN`. If not using .envrc, set the env var manually.
+
+Note: GitHub Actions CI does NOT auto-deploy the cloud worker. Only the gallery (GitHub Pages) is auto-deployed on push.
 
 ## Development Workflow
 
@@ -374,6 +390,13 @@ demoscript export-video examples/browser-demo -o demo.mp4
 
 # Export demo as animated GIF (with optimization)
 demoscript export-gif examples/browser-demo -o demo.gif --optimize
+
+# Cloud commands
+demoscript login                              # Login to DemoScript Cloud
+demoscript logout                             # Logout from DemoScript Cloud
+demoscript whoami                             # Show current logged in user
+demoscript push examples/feature-showcase     # Push demo to cloud
+demoscript push . --slug my-demo --private    # Push with custom slug and visibility
 ```
 
 Note: Use `npx demoscript` instead if running from source during development.
@@ -385,6 +408,8 @@ Note: Use `npx demoscript` instead if running from source during development.
 - **build**: Generates static sites with embedded config, supports `--all` for gallery index
 - **export-video**: Captures demo frames with Puppeteer, encodes to MP4 with ffmpeg
 - **export-gif**: Captures demo frames, encodes to GIF with optional palette optimization
+- **login/logout/whoami**: Authenticate with DemoScript Cloud, credentials stored in `~/.demoscript/config.json`
+- **push**: Upload demos to DemoScript Cloud (YAML + recordings), creates or updates existing demos
 
 ## Tunnel Options
 
