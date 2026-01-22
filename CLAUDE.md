@@ -125,15 +125,15 @@ steps:
 # Start dev server for live demo presentation
 demoscript serve examples/feature-showcase --port 3000 --host
 
-# Open visual demo builder
-demoscript builder                    # Opens at localhost:3002
-demoscript builder --port 8080        # Custom port
-demoscript builder --host             # Accessible from LAN
+# Open visual demo editor
+demoscript edit                       # Opens at localhost:3002
+demoscript edit --port 8080           # Custom port
+demoscript edit --host                # Accessible from LAN
 ```
 
-## Visual Builder
+## Visual Editor
 
-The Visual Builder provides an interactive way to create demos without writing YAML manually.
+The Visual Editor provides an interactive way to create demos without writing YAML manually.
 
 ### Features
 
@@ -152,7 +152,7 @@ The Visual Builder provides an interactive way to create demos without writing Y
 |------|---------|
 | `packages/ui/src/pages/DemoEditor.tsx` | Main editor component |
 | `packages/ui/src/context/EditorContext.tsx` | Editor state management |
-| `packages/ui/src/components/builder/SortableStepList.tsx` | Drag-drop step list |
+| `packages/ui/src/components/editor/SortableStepList.tsx` | Drag-drop step list |
 | `packages/ui/src/lib/yaml-parser.ts` | YAML parsing/generation |
 
 ## Sandbox API
