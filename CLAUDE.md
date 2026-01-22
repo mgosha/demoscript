@@ -124,7 +124,36 @@ steps:
 ```bash
 # Start dev server for live demo presentation
 demoscript serve examples/feature-showcase --port 3000 --host
+
+# Open visual demo builder
+demoscript builder                    # Opens at localhost:3002
+demoscript builder --port 8080        # Custom port
+demoscript builder --host             # Accessible from LAN
 ```
+
+## Visual Builder
+
+The Visual Builder provides an interactive way to create demos without writing YAML manually.
+
+### Features
+
+- **Drag-and-drop step reordering** - Reorder steps visually with drag handles
+- **Live preview** - See step execution results in real-time with Execute button
+- **Playback controls** - Play, pause, step through demo with speed control
+- **YAML import/export** - Import existing YAML or export to YAML at any time
+- **Per-step YAML editor** - Edit individual step YAML with live syntax validation
+- **Settings panel** - Configure title, description, API settings, theme, and effects
+- **OpenAPI integration** - Auto-generate form fields from OpenAPI specs
+- **Visual effects** - Confetti and sound effects on step completion
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `packages/ui/src/pages/DemoEditor.tsx` | Main editor component |
+| `packages/ui/src/context/EditorContext.tsx` | Editor state management |
+| `packages/ui/src/components/builder/SortableStepList.tsx` | Drag-drop step list |
+| `packages/ui/src/lib/yaml-parser.ts` | YAML parsing/generation |
 
 ## Sandbox API
 
