@@ -124,36 +124,28 @@ steps:
 ```bash
 # Start dev server for live demo presentation
 demoscript serve examples/feature-showcase --port 3000 --host
-
-# Open visual demo editor
-demoscript edit                       # Opens at localhost:3002
-demoscript edit --port 8080           # Custom port
-demoscript edit --host                # Accessible from LAN
 ```
 
 ## Visual Editor
 
-The Visual Editor provides an interactive way to create demos without writing YAML manually.
+The Visual Editor for creating demos interactively is a **cloud-only feature** available at [demoscript.app/dashboard](https://demoscript.app/dashboard).
 
 ### Features
 
 - **Drag-and-drop step reordering** - Reorder steps visually with drag handles
 - **Live preview** - See step execution results in real-time with Execute button
 - **Playback controls** - Play, pause, step through demo with speed control
-- **YAML import/export** - Import existing YAML or export to YAML at any time
+- **Demo menu (New/Open/Save/Save As)** - Manage demos stored in the cloud
 - **Per-step YAML editor** - Edit individual step YAML with live syntax validation
 - **Settings panel** - Configure title, description, API settings, theme, and effects
 - **OpenAPI integration** - Auto-generate form fields from OpenAPI specs
 - **Visual effects** - Confetti and sound effects on step completion
 
-### Key Files
+### Access
 
-| File | Purpose |
-|------|---------|
-| `packages/ui/src/pages/DemoEditor.tsx` | Main editor component |
-| `packages/ui/src/context/EditorContext.tsx` | Editor state management |
-| `packages/ui/src/components/editor/SortableStepList.tsx` | Drag-drop step list |
-| `packages/ui/src/lib/yaml-parser.ts` | YAML parsing/generation |
+1. Go to [demoscript.app/dashboard/new](https://demoscript.app/dashboard/new)
+2. Click "Visual Editor" tab
+3. Build demos interactively and save to your account
 
 ## Sandbox API
 
